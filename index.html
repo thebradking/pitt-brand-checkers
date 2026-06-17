@@ -132,11 +132,11 @@
     ondragover="event.preventDefault(); this.classList.add('drag-over')"
     ondragleave="this.classList.remove('drag-over')"
     ondrop="handleDrop(event)">
-    <input type="file" id="file-input" accept=".pdf" onchange="handleFile(event)">
     <span class="upload-icon">📄</span>
     <h2>Drop your PDF to check it against Pitt standards</h2>
     <p>Checks brand compliance and writing style with annotations directly on your document. No account or API key needed.</p>
-    <button class="btn-upload" onclick="document.getElementById('file-input').click()">Select PDF</button>
+    <label for="file-input" class="btn-upload" style="display:inline-block;cursor:pointer;">Select PDF</label>
+    <input type="file" id="file-input" accept=".pdf" onchange="handleFile(event)" style="display:none;">
   </div>
 
   <div id="loading-panel">
