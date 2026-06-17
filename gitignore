@@ -1,0 +1,19 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Never commit API keys — the tool is designed so they never appear in source
+# If you see a file here that looks like it might contain a key, do not commit it
+*.env
+.env*
+secrets.*
+
+# Local test files — do not commit real Pitt documents to a public repo
+test-docs/
+sample-pdfs/

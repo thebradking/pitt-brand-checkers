@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pitt Document Checker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  :root {
+    --royal: #003594;
+    --gold: #FFB81C;
+    --gold-light: #FFF3CC;
+    --dark: #00205B;
+    --grey: #C8C9C7;
+    --white: #ffffff;
+    --error: #FF5B45;
+    --warn: #F7911E;
+    --pass: #00AD6E;
+    --bg: #f4f5f8;
+    --card: #ffffff;
+    --border: #e2e4e9;
+    --text: #1a1e2e;
+    --muted: #6b7280;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--royal);
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    height: 64px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+  }
+
+  .logo-badge {
+    background: var(--gold);
+    width: 40px; height: 40px;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 22px; color: var(--royal);
+    flex-shrink: 0;
+    letter-spacing: -1px;
+  }
+
+  header h1 {
+    color: var(--white);
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+  }
+
+  header p {
+    color: rgba(255,255,255,0.6);
+    font-size: 12px;
+    margin-top: 1px;
+  }
+
+  .header-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* ── API KEY BANNER ── */
+  #api-banner {
+    background: var(--dark);
+    border-bottom: 2px solid var(--gold);
+    padding: 10px 32px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  #api-banner label {
+    color: rgba(255,255,255,0.85);
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  #api-key-input {
+    flex: 1;
+    min-width: 260px;
+    max-width: 420px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 6px;
+    padding: 7px 12px;
+    color: white;
+    font-size: 13px;
+    font-family: monospace;
+    outline: none;
+  }
+
+  #api-key-input:focus { border-color: var(--gold); }
+  #api-key-input::placeholder { color: rgba(255,255,255,0.35); }
+
+  .btn-save-key {
+    background: var(--gold);
+    color: var(--royal);
+    border: none;
+    border-radius: 6px;
+    padding: 7px 16px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .btn-save-key:hover { background: #e6a518; }
+
+  #key-status {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-weight: 600;
+  }
+
+  .key-ok { background: rgba(0,173,110,0.2); color: #00AD6E; }
+  .key-missing { background: rgba(255,91,69,0.2); color: #FF5B45; }
+
+  .api-note {
+    color: rgba(255,255,255,0.45);
+    font-size: 11px;
+    width: 100%;
+    margin-top: 2px;
+  }
+
+  /* ── MAIN LAYOUT ── */
+  main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px 24px;
+  }
+
+  /* ── UPLOAD ZONE ── */
+  #upload-zone {
+    border: 2px dashed var(--royal);
+    border-radius: 14px;
+    padding: 56px 32px;
+    text-align: center;
+    cursor: pointer;
+    background: var(--card);
+    transition: background 0.15s, border-color 0.15s;
+    position: relative;
+  }
+
+  #upload-zone:hover, #upload-zone.drag-over {
+    background: #eef2ff;
+    border-color: var(--gold);
+  }
+
+  #upload-zone input { display: none; }
+
+  .upload-icon {
+    font-size: 52px;
+    margin-bottom: 14px;
+    display: block;
+  }
+
+  #upload-zone h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--royal);
+    margin-bottom: 8px;
+  }
+
+  #upload-zone p {
+    color: var(--muted);
+    font-size: 14px;
+    margin-bottom: 24px;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .btn-upload {
+    background: var(--royal);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 28px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-block;
+  }
+
+  .btn-upload:hover { background: var(--dark); }
+
+  /* ── CHECK SELECTOR ── */
+  #check-options {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+
+  .check-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--card);
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: border-color 0.15s, background 0.15s;
+    user-select: none;
+  }
+
+  .check-toggle.active {
+    border-color: var(--royal);
+    background: #eef2ff;
+    color: var(--royal);
+  }
+
+  .check-toggle input { display: none; }
+
+  /* ── LOADING ── */
+  #loading-panel {
+    display: none;
+    background: var(--card);
+    border-radius: 14px;
+    padding: 48px 32px;
+    text-align: center;
+  }
+
+  .spinner {
+    width: 48px; height: 48px;
+    border: 4px solid var(--border);
+    border-top-color: var(--royal);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 20px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #loading-panel h3 {
+    color: var(--royal);
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  #loading-panel p {
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  #loading-steps {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 360px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--muted);
+    padding: 8px 14px;
+    border-radius: 6px;
+    background: var(--bg);
+  }
+
+  .step.active { color: var(--royal); background: #eef2ff; font-weight: 600; }
+  .step.done { color: var(--pass); }
+  .step-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--grey);
+    flex-shrink: 0;
+  }
+  .step.active .step-dot { background: var(--royal); }
+  .step.done .step-dot { background: var(--pass); }
+
+  /* ── RESULTS ── */
+  #results-panel { display: none; }
+
+  .results-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+
+  .file-info {
+    flex: 1;
+    background: var(--card);
+    border-radius: 10px;
+    padding: 14px 18px;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .file-info .file-icon { font-size: 24px; }
+
+  .file-info h3 { font-size: 14px; font-weight: 700; }
+  .file-info p { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  .btn-new {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--text);
+  }
+
+  .btn-new:hover { background: #e5e7eb; }
+
+  /* Score pills */
+  .score-pills {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+
+  .score-pill {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+    flex: 1;
+    min-width: 140px;
+  }
+
+  .score-pill:hover { border-color: var(--royal); }
+  .score-pill.active { border-color: var(--royal); background: #eef2ff; }
+
+  .pill-icon { font-size: 22px; }
+
+  .pill-count {
+    font-size: 26px;
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  .pill-count.error { color: var(--error); }
+  .pill-count.warn { color: var(--warn); }
+  .pill-count.ok { color: var(--pass); }
+  .pill-count.none { color: var(--grey); }
+
+  .pill-label {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 600;
+    margin-top: 2px;
+  }
+
+  /* ── DOC VIEWER ── */
+  #viewer-container {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 20px;
+    align-items: start;
+  }
+
+  @media (max-width: 900px) {
+    #viewer-container { grid-template-columns: 1fr; }
+  }
+
+  .pdf-viewer {
+    background: var(--card);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .pdf-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    background: #fafafa;
+  }
+
+  .pdf-nav button {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--text);
+  }
+
+  .pdf-nav button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .pdf-nav button:not(:disabled):hover { background: var(--border); }
+
+  .pdf-nav span {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  #page-wrapper {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+    background: #6b7280;
+    min-height: 400px;
+  }
+
+  #pdf-canvas {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+
+  #annotation-layer {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    pointer-events: none;
+  }
+
+  /* ── ANNOTATION MARKERS ── */
+  .ann-marker {
+    position: absolute;
+    pointer-events: all;
+    cursor: pointer;
+    z-index: 10;
+  }
+
+  .ann-dot {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    font-weight: 900;
+    color: white;
+    border: 2px solid rgba(255,255,255,0.8);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    transition: transform 0.15s;
+  }
+
+  .ann-dot:hover { transform: scale(1.2); }
+  .ann-dot.type-error { background: var(--error); }
+  .ann-dot.type-warn { background: var(--warn); }
+  .ann-dot.type-brand { background: var(--royal); }
+  .ann-dot.type-style { background: #7c3aed; }
+
+  .ann-tooltip {
+    position: absolute;
+    left: 28px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--text);
+    color: white;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 12px;
+    width: 220px;
+    line-height: 1.5;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 20;
+  }
+
+  .ann-marker:hover .ann-tooltip { opacity: 1; }
+
+  .ann-tooltip strong {
+    display: block;
+    color: var(--gold);
+    margin-bottom: 4px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── ISSUES PANEL ── */
+  .issues-panel {
+    background: var(--card);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    position: sticky;
+    top: 84px;
+    max-height: calc(100vh - 100px);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .issues-panel-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    background: #fafafa;
+  }
+
+  .issues-panel-header h3 {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--royal);
+    margin-bottom: 8px;
+  }
+
+  .filter-tabs {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  .filter-tab {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    background: var(--bg);
+    color: var(--muted);
+    transition: background 0.1s;
+  }
+
+  .filter-tab.active { background: var(--royal); color: white; }
+
+  #issues-list {
+    overflow-y: auto;
+    flex: 1;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .issue-card {
+    border-radius: 8px;
+    border-left: 3px solid var(--border);
+    padding: 10px 12px;
+    background: var(--bg);
+    cursor: pointer;
+    transition: background 0.1s;
+    font-size: 13px;
+  }
+
+  .issue-card:hover { background: #eef2ff; }
+  .issue-card.selected { background: #eef2ff; border-left-color: var(--royal); }
+
+  .issue-card.sev-error { border-left-color: var(--error); }
+  .issue-card.sev-warn { border-left-color: var(--warn); }
+  .issue-card.sev-brand { border-left-color: var(--royal); }
+  .issue-card.sev-style { border-left-color: #7c3aed; }
+
+  .issue-card-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+
+  .issue-type-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 20px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .badge-error { background: rgba(255,91,69,0.15); color: var(--error); }
+  .badge-warn { background: rgba(247,145,30,0.15); color: var(--warn); }
+  .badge-brand { background: rgba(0,53,148,0.12); color: var(--royal); }
+  .badge-style { background: rgba(124,58,237,0.12); color: #7c3aed; }
+
+  .issue-title {
+    font-weight: 600;
+    font-size: 13px;
+    line-height: 1.3;
+    flex: 1;
+  }
+
+  .issue-desc {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .issue-page {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 5px;
+    font-weight: 600;
+  }
+
+  .no-issues {
+    text-align: center;
+    padding: 32px 16px;
+    color: var(--muted);
+  }
+
+  .no-issues .ni-icon { font-size: 36px; margin-bottom: 8px; }
+
+  /* ── SUMMARY BOX ── */
+  #summary-box {
+    background: var(--gold-light);
+    border: 1px solid var(--gold);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--dark);
+    display: none;
+  }
+
+  #summary-box strong { color: var(--royal); }
+
+  /* ── EMPTY STATE ── */
+  .empty-msg {
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+    padding: 20px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-badge">P</div>
+  <div>
+    <h1>PITT DOCUMENT CHECKER</h1>
+    <p>Brand Guidelines v2.2 · Writing Style Manual (3rd Ed.)</p>
+  </div>
+  <div class="header-right">
+    <span id="key-status" class="key-missing">No API key</span>
+  </div>
+</header>
+
+<!-- API KEY BANNER -->
+<div id="api-banner">
+  <label for="api-key-input">🔑 Anthropic API Key</label>
+  <input type="password" id="api-key-input" placeholder="sk-ant-api03-..." autocomplete="off" spellcheck="false">
+  <button class="btn-save-key" onclick="saveKey()">Save for session</button>
+  <span class="api-note">Your key is stored only in this browser session — never sent anywhere except directly to Anthropic.</span>
+</div>
+
+<main>
+
+  <!-- CHECK OPTIONS -->
+  <div id="check-options">
+    <label class="check-toggle active" id="toggle-brand">
+      <input type="checkbox" id="check-brand" checked>
+      🎨 Brand Compliance
+    </label>
+    <label class="check-toggle active" id="toggle-style">
+      <input type="checkbox" id="check-style" checked>
+      ✍️ Writing Style
+    </label>
+  </div>
+
+  <!-- UPLOAD ZONE -->
+  <div id="upload-zone"
+    ondragover="event.preventDefault(); this.classList.add('drag-over')"
+    ondragleave="this.classList.remove('drag-over')"
+    ondrop="handleDrop(event)"
+    onclick="document.getElementById('file-input').click()">
+    <input type="file" id="file-input" accept=".pdf" onchange="handleFile(event)">
+    <span class="upload-icon">📄</span>
+    <h2>Drop your PDF to check it against Pitt standards</h2>
+    <p>Checks brand compliance (colors, fonts, logos, messaging) and writing style (Pitt Style Manual 3rd Ed.) with annotations directly on your document.</p>
+    <button class="btn-upload" onclick="event.stopPropagation()">Select PDF</button>
+  </div>
+
+  <!-- LOADING -->
+  <div id="loading-panel">
+    <div class="spinner"></div>
+    <h3>Analyzing your document…</h3>
+    <p>This takes 20–40 seconds depending on length.</p>
+    <div id="loading-steps">
+      <div class="step active" id="step-render"><span class="step-dot"></span> Rendering PDF pages</div>
+      <div class="step" id="step-extract"><span class="step-dot"></span> Extracting text content</div>
+      <div class="step" id="step-ai"><span class="step-dot"></span> Running AI analysis</div>
+      <div class="step" id="step-annotate"><span class="step-dot"></span> Placing annotations</div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results-panel">
+
+    <div class="results-header">
+      <div class="file-info">
+        <span class="file-icon">📄</span>
+        <div>
+          <h3 id="file-name-display">document.pdf</h3>
+          <p id="file-meta">0 pages · 0 issues found</p>
+        </div>
+      </div>
+      <button class="btn-new" onclick="resetTool()">↩ New document</button>
+    </div>
+
+    <div id="summary-box"></div>
+
+    <div class="score-pills" id="score-pills">
+      <div class="score-pill active" onclick="filterIssues('all')" id="pill-all">
+        <span class="pill-icon">📋</span>
+        <div>
+          <div class="pill-count none" id="count-all">0</div>
+          <div class="pill-label">All Issues</div>
+        </div>
+      </div>
+      <div class="score-pill" onclick="filterIssues('brand')" id="pill-brand">
+        <span class="pill-icon">🎨</span>
+        <div>
+          <div class="pill-count error" id="count-brand">0</div>
+          <div class="pill-label">Brand</div>
+        </div>
+      </div>
+      <div class="score-pill" onclick="filterIssues('style')" id="pill-style">
+        <span class="pill-icon">✍️</span>
+        <div>
+          <div class="pill-count warn" id="count-style">0</div>
+          <div class="pill-label">Writing Style</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="viewer-container">
+      <!-- PDF VIEWER -->
+      <div class="pdf-viewer">
+        <div class="pdf-nav">
+          <button onclick="changePage(-1)" id="btn-prev">← Prev</button>
+          <span id="page-indicator">Page 1 of 1</span>
+          <button onclick="changePage(1)" id="btn-next">Next →</button>
+        </div>
+        <div id="page-wrapper">
+          <canvas id="pdf-canvas"></canvas>
+          <div id="annotation-layer"></div>
+        </div>
+      </div>
+
+      <!-- ISSUES PANEL -->
+      <div class="issues-panel">
+        <div class="issues-panel-header">
+          <h3>Issues Found</h3>
+          <div class="filter-tabs">
+            <button class="filter-tab active" onclick="filterIssues('all')">All</button>
+            <button class="filter-tab" onclick="filterIssues('brand')">Brand</button>
+            <button class="filter-tab" onclick="filterIssues('style')">Style</button>
+          </div>
+        </div>
+        <div id="issues-list"></div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+// ── PDF.js setup ──
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ── State ──
+let apiKey = sessionStorage.getItem('pitt_api_key') || '';
+let pdfDoc = null;
+let currentPage = 1;
+let totalPages = 0;
+let allIssues = [];
+let activeFilter = 'all';
+let pageScale = 1;
+let pageCanvasWidth = 0;
+let pageCanvasHeight = 0;
+let extractedPages = []; // {pageNum, text}
+
+// ── API Key ──
+function saveKey() {
+  const val = document.getElementById('api-key-input').value.trim();
+  if (!val) return;
+  apiKey = val;
+  sessionStorage.setItem('pitt_api_key', val);
+  updateKeyStatus();
+}
+
+function updateKeyStatus() {
+  const el = document.getElementById('key-status');
+  if (apiKey) {
+    el.textContent = '✓ Key saved';
+    el.className = 'key-ok';
+    document.getElementById('api-key-input').value = '••••••••••••••••';
+  } else {
+    el.textContent = 'No API key';
+    el.className = 'key-missing';
+  }
+}
+
+// restore on load
+if (apiKey) {
+  document.getElementById('api-key-input').value = '••••••••••••••••';
+  updateKeyStatus();
+}
+
+// toggle checkboxes
+['brand','style'].forEach(id => {
+  document.getElementById('check-'+id).addEventListener('change', function() {
+    document.getElementById('toggle-'+id).classList.toggle('active', this.checked);
+  });
+});
+
+// ── File handling ──
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file?.type === 'application/pdf') processFile(file);
+}
+
+function handleFile(e) {
+  const file = e.target.files[0];
+  if (file) processFile(file);
+}
+
+async function processFile(file) {
+  if (!apiKey) {
+    alert('Please enter your Anthropic API key first.');
+    return;
+  }
+
+  const checkBrand = document.getElementById('check-brand').checked;
+  const checkStyle = document.getElementById('check-style').checked;
+  if (!checkBrand && !checkStyle) {
+    alert('Please select at least one check type.');
+    return;
+  }
+
+  document.getElementById('upload-zone').style.display = 'none';
+  document.getElementById('check-options').style.display = 'none';
+  document.getElementById('loading-panel').style.display = 'block';
+  document.getElementById('results-panel').style.display = 'none';
+
+  try {
+    setStep('render');
+    const arrayBuffer = await file.arrayBuffer();
+    pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    totalPages = pdfDoc.numPages;
+
+    setStep('extract');
+    extractedPages = [];
+    for (let i = 1; i <= totalPages; i++) {
+      const page = await pdfDoc.getPage(i);
+      const tc = await page.getTextContent();
+      const text = tc.items.map(it => it.str).join(' ');
+      extractedPages.push({ pageNum: i, text });
+    }
+    const fullText = extractedPages.map(p => `[PAGE ${p.pageNum}]\n${p.text}`).join('\n\n');
+
+    setStep('ai');
+    const issues = await runAIAnalysis(fullText, totalPages, checkBrand, checkStyle);
+    allIssues = issues;
+
+    setStep('annotate');
+    currentPage = 1;
+    await renderPage(currentPage);
+
+    document.getElementById('file-name-display').textContent = file.name;
+    document.getElementById('file-meta').textContent = `${totalPages} page${totalPages!==1?'s':''} · ${issues.length} issue${issues.length!==1?'s':''} found`;
+
+    updateCounts();
+    renderIssuesList('all');
+    document.getElementById('loading-panel').style.display = 'none';
+    document.getElementById('results-panel').style.display = 'block';
+
+  } catch(err) {
+    document.getElementById('loading-panel').style.display = 'none';
+    document.getElementById('upload-zone').style.display = 'block';
+    document.getElementById('check-options').style.display = 'flex';
+    alert('Error: ' + (err.message || 'Something went wrong. Check your API key and try again.'));
+    console.error(err);
+  }
+}
+
+function setStep(active) {
+  ['render','extract','ai','annotate'].forEach(s => {
+    const el = document.getElementById('step-'+s);
+    const idx = ['render','extract','ai','annotate'].indexOf(s);
+    const activeIdx = ['render','extract','ai','annotate'].indexOf(active);
+    el.className = 'step' + (s === active ? ' active' : idx < activeIdx ? ' done' : '');
+  });
+}
+
+// ── AI Analysis ──
+async function runAIAnalysis(fullText, numPages, checkBrand, checkStyle) {
+  const brandRules = `
+PITT BRAND RULES (v2.2):
+COLORS — Primary: Pitt Royal #003594, Pitt Gold #FFB81C. Secondary: Medium Blue #00205B, Grey #C8C9C7, Bronze #B87333, White, Black. Accent (max 4 at once): New Sky #DBEEFF, Golden Haze #FFE939, Light Blue #66B2E3, Light Green #00AD6E, Orange #F7911E, Infrared #FF5B45, White Peach #FFDECD, Merlot #770538.
+FONTS — Hero headlines: ATF Alternate Gothic Compressed (ALL CAPS). Sub: ATF Alternate Gothic. Body: Merriweather or Roboto. Secondary accent: Instrument Serif (NOT for body copy). Avoid: Arial, Helvetica, Times New Roman, Calibri, Georgia.
+MESSAGING — "Hail to Possible": UCM-level ONLY, schools/units must NOT use it. "It's Possible at Pitt": OK for all. "Hail to Pitt"/"H2P": spirit/greetings only.
+LOGOS — Institutional Mark: academic/external. Informal Mark: internal only. Pitt Script: athletics/spirit/merchandise only. Seal: official docs only. Never distort, rotate, recolor, add effects.
+`;
+
+  const styleRules = `
+PITT WRITING STYLE RULES (3rd Edition):
+- University name: First ref "University of Pittsburgh", then "Pitt" or "the University". Never: U of Pitt, U of Pittsburgh, Pitt U.
+- Office name: "Office of University Communications" (NOT "Office of University Communications and Marketing").
+- Seasons: always lowercase (fall, spring, summer, winter).
+- Titles before name: capitalize. Titles after name or alone: lowercase.
+- Numbers: spell out 1-9, numerals for 10+. Always numerals for age, %, temp, time, money.
+- Phone format: 412-624-4141 (hyphens, no parens, no +1 for local).
+- September: Sep. not Sept.
+- Degrees: no periods (BA, MS, PhD). bachelor's, master's (apostrophe).
+- "Hail to Possible": UCM only. Do NOT use for school/unit campaigns.
+- Carnegie Mellon (not CMU after first ref).
+- Staff Association Council (not "Staff Council").
+- Pitt police (lowercase p after Pitt).
+- Health care: two words.
+- Email: one word.
+- Em dash: no spaces on either side.
+- Named schools (full name first ref): Joseph M. Katz Graduate School of Business; Swanson School of Engineering; Kenneth P. Dietrich School of Arts and Sciences.
+- Black/White (racial): capitalize both.
+- Gender-inclusive: chair not chairman, first-year not freshman, congressperson not congressman.
+`;
+
+  const checks = [];
+  if (checkBrand) checks.push(brandRules);
+  if (checkStyle) checks.push(styleRules);
+
+  const prompt = `You are a Pitt brand and style compliance checker. Analyze the document text below and return a JSON array of issues.
+
+${checks.join('\n')}
+
+DOCUMENT TEXT (with page markers):
+${fullText.slice(0, 12000)}
+
+Return ONLY a JSON array. Each object must have:
+- "type": "brand" or "style"
+- "severity": "error" or "warn"  
+- "page": page number (integer, 1-based) where the issue occurs — use the [PAGE N] markers
+- "title": short label (max 8 words)
+- "description": clear explanation of what's wrong and how to fix it (1-2 sentences)
+- "quote": the exact text fragment from the document that has the issue (max 10 words), or null
+- "xPercent": estimated horizontal position of the issue on the page as a percentage 0-100 (left=0, right=100) — make a reasonable estimate based on where such content typically appears
+- "yPercent": estimated vertical position on the page as a percentage 0-100 (top=0, bottom=100) — make a reasonable estimate
+
+Return 3-15 issues maximum. Focus on the most important, clear-cut violations. If no issues found, return [].
+No markdown, no explanation — only the JSON array.`;
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 2000,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error?.message || `API error ${response.status}`);
+  }
+
+  const data = await response.json();
+  const text = data.content?.map(c => c.text || '').join('') || '[]';
+  const clean = text.replace(/```json|```/g, '').trim();
+
+  try {
+    const parsed = JSON.parse(clean);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    console.error('JSON parse error:', clean.slice(0, 300));
+    return [];
+  }
+}
+
+// ── PDF Rendering ──
+async function renderPage(pageNum) {
+  const page = await pdfDoc.getPage(pageNum);
+  const viewport = page.getViewport({ scale: 1.5 });
+
+  const canvas = document.getElementById('pdf-canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+  pageCanvasWidth = viewport.width;
+  pageCanvasHeight = viewport.height;
+
+  await page.render({ canvasContext: ctx, viewport }).promise;
+
+  // Size annotation layer to match canvas
+  const annLayer = document.getElementById('annotation-layer');
+  annLayer.style.width = viewport.width + 'px';
+  annLayer.style.height = viewport.height + 'px';
+
+  document.getElementById('page-indicator').textContent = `Page ${pageNum} of ${totalPages}`;
+  document.getElementById('btn-prev').disabled = pageNum <= 1;
+  document.getElementById('btn-next').disabled = pageNum >= totalPages;
+
+  renderAnnotations(pageNum);
+}
+
+async function changePage(delta) {
+  const newPage = currentPage + delta;
+  if (newPage < 1 || newPage > totalPages) return;
+  currentPage = newPage;
+  await renderPage(currentPage);
+}
+
+// ── Annotations ──
+function renderAnnotations(pageNum) {
+  const layer = document.getElementById('annotation-layer');
+  layer.innerHTML = '';
+
+  const pageIssues = allIssues.filter(iss => {
+    if (activeFilter !== 'all' && iss.type !== activeFilter) return false;
+    return iss.page === pageNum;
+  });
+
+  pageIssues.forEach((iss, idx) => {
+    const marker = document.createElement('div');
+    marker.className = 'ann-marker';
+
+    const x = ((iss.xPercent || 50) / 100) * pageCanvasWidth;
+    const y = ((iss.yPercent || 50) / 100) * pageCanvasHeight;
+
+    marker.style.left = x + 'px';
+    marker.style.top = (y - 11) + 'px';
+
+    const typeClass = iss.severity === 'error' ? 'type-error' :
+                      iss.type === 'brand' ? 'type-brand' : 'type-style';
+
+    const issueNum = allIssues.filter(i => activeFilter==='all' || i.type===activeFilter).indexOf(iss) + 1;
+
+    marker.innerHTML = `
+      <div class="ann-dot ${typeClass}">${issueNum}</div>
+      <div class="ann-tooltip">
+        <strong>${iss.type === 'brand' ? '🎨 Brand' : '✍️ Style'} · ${iss.severity}</strong>
+        ${iss.title}<br>
+        <span style="color:rgba(255,255,255,0.7);font-size:11px">${iss.description.slice(0,100)}${iss.description.length>100?'…':''}</span>
+      </div>
+    `;
+
+    marker.addEventListener('click', () => {
+      const card = document.querySelector(`[data-issue-idx="${allIssues.indexOf(iss)}"]`);
+      if (card) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        document.querySelectorAll('.issue-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+      }
+    });
+
+    layer.appendChild(marker);
+  });
+}
+
+// ── Issues List ──
+function renderIssuesList(filter) {
+  const list = document.getElementById('issues-list');
+  const filtered = allIssues.filter(iss => filter === 'all' || iss.type === filter);
+
+  // Update filter tab active states
+  document.querySelectorAll('.filter-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.textContent.toLowerCase() === filter ||
+      (filter === 'all' && tab.textContent === 'All'));
+  });
+
+  // Update score pills
+  document.querySelectorAll('.score-pill').forEach(pill => {
+    pill.classList.toggle('active', pill.id === 'pill-' + filter);
+  });
+
+  if (filtered.length === 0) {
+    list.innerHTML = `<div class="no-issues"><div class="ni-icon">✅</div><p>No ${filter === 'all' ? '' : filter + ' '}issues found.</p></div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map((iss, i) => {
+    const globalIdx = allIssues.indexOf(iss);
+    const badgeClass = iss.type === 'brand' ? 'badge-brand' : 'badge-style';
+    const sevClass = iss.severity === 'error' ? 'sev-error' : iss.type === 'brand' ? 'sev-brand' : 'sev-style';
+    const typeLabel = iss.type === 'brand' ? '🎨 Brand' : '✍️ Style';
+    return `
+      <div class="issue-card ${sevClass}" data-issue-idx="${globalIdx}" data-page="${iss.page}" onclick="jumpToIssue(${globalIdx})">
+        <div class="issue-card-top">
+          <span class="issue-type-badge ${badgeClass}">${typeLabel}</span>
+          <span class="issue-title">${iss.title}</span>
+        </div>
+        <div class="issue-desc">${iss.description}</div>
+        ${iss.quote ? `<div style="margin-top:5px;font-size:11px;color:#555;font-style:italic;background:#f3f4f6;padding:3px 7px;border-radius:4px;">"${iss.quote}"</div>` : ''}
+        <div class="issue-page">Page ${iss.page}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function jumpToIssue(globalIdx) {
+  const iss = allIssues[globalIdx];
+  if (!iss) return;
+  if (currentPage !== iss.page) {
+    currentPage = iss.page;
+    await renderPage(currentPage);
+  }
+  document.querySelectorAll('.issue-card').forEach(c => c.classList.remove('selected'));
+  const card = document.querySelector(`[data-issue-idx="${globalIdx}"]`);
+  if (card) card.classList.add('selected');
+}
+
+function filterIssues(filter) {
+  activeFilter = filter;
+  renderIssuesList(filter);
+  renderAnnotations(currentPage);
+}
+
+function updateCounts() {
+  const brandCount = allIssues.filter(i => i.type === 'brand').length;
+  const styleCount = allIssues.filter(i => i.type === 'style').length;
+
+  document.getElementById('count-all').textContent = allIssues.length;
+  document.getElementById('count-brand').textContent = brandCount;
+  document.getElementById('count-style').textContent = styleCount;
+
+  document.getElementById('count-all').className = 'pill-count ' + (allIssues.length > 0 ? 'error' : 'none');
+  document.getElementById('count-brand').className = 'pill-count ' + (brandCount > 0 ? 'error' : 'none');
+  document.getElementById('count-style').className = 'pill-count ' + (styleCount > 0 ? 'warn' : 'none');
+
+  // Summary
+  if (allIssues.length > 0) {
+    const errorCount = allIssues.filter(i => i.severity === 'error').length;
+    const warnCount = allIssues.filter(i => i.severity === 'warn').length;
+    const box = document.getElementById('summary-box');
+    box.style.display = 'block';
+    box.innerHTML = `<strong>Summary:</strong> Found ${allIssues.length} issue${allIssues.length!==1?'s':''} — 
+      ${errorCount > 0 ? `<strong style="color:var(--error)">${errorCount} error${errorCount!==1?'s':''}</strong>` : '0 errors'} and 
+      ${warnCount > 0 ? `<strong style="color:var(--warn)">${warnCount} warning${warnCount!==1?'s':''}</strong>` : '0 warnings'}.
+      ${brandCount > 0 ? ` ${brandCount} brand compliance issue${brandCount!==1?'s':''}.` : ''}
+      ${styleCount > 0 ? ` ${styleCount} writing style issue${styleCount!==1?'s':''}.` : ''}
+      Click any marker on the document or card in the list to navigate.`;
+  }
+}
+
+function resetTool() {
+  pdfDoc = null; currentPage = 1; totalPages = 0;
+  allIssues = []; activeFilter = 'all';
+  extractedPages = [];
+  document.getElementById('results-panel').style.display = 'none';
+  document.getElementById('upload-zone').style.display = 'block';
+  document.getElementById('check-options').style.display = 'flex';
+  document.getElementById('summary-box').style.display = 'none';
+  document.getElementById('file-input').value = '';
+  document.getElementById('annotation-layer').innerHTML = '';
+}
+</script>
+</body>
+</html>
