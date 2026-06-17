@@ -5,481 +5,410 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pitt Document Checker</title>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
 <style>
-  :root {
-    --royal: #003594; --gold: #FFB81C; --gold-light: #FFF3CC;
-    --dark: #00205B; --grey: #C8C9C7; --error: #FF5B45;
-    --warn: #F7911E; --pass: #00AD6E; --bg: #f4f5f8;
-    --card: #ffffff; --border: #e2e4e9; --text: #1a1e2e; --muted: #6b7280;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-  header { background: var(--royal); padding: 0 32px; display: flex; align-items: center; gap: 16px; height: 64px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 12px rgba(0,0,0,0.2); }
-  .logo-badge { background: var(--gold); width: 40px; height: 40px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 22px; color: var(--royal); flex-shrink: 0; }
-  header h1 { color: white; font-size: 17px; font-weight: 700; letter-spacing: 0.3px; }
-  header p { color: rgba(255,255,255,0.6); font-size: 12px; margin-top: 1px; }
-  main { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
-  #check-options { display: flex; gap: 12px; margin-bottom: 28px; flex-wrap: wrap; }
-  .check-toggle { display: flex; align-items: center; gap: 8px; background: var(--card); border: 2px solid var(--border); border-radius: 8px; padding: 10px 16px; cursor: pointer; font-size: 14px; font-weight: 600; user-select: none; transition: border-color 0.15s, background 0.15s; }
-  .check-toggle.active { border-color: var(--royal); background: #eef2ff; color: var(--royal); }
-  .check-toggle input { display: none; }
-  #upload-zone { border: 2px dashed var(--royal); border-radius: 14px; padding: 56px 32px; text-align: center; background: var(--card); transition: background 0.15s, border-color 0.15s; }
-  #upload-zone:hover, #upload-zone.drag-over { background: #eef2ff; border-color: var(--gold); }
-  #upload-zone input { display: none; }
-  .upload-icon { font-size: 52px; margin-bottom: 14px; display: block; }
-  #upload-zone h2 { font-size: 20px; font-weight: 700; color: var(--royal); margin-bottom: 8px; }
-  #upload-zone p { color: var(--muted); font-size: 14px; margin-bottom: 24px; max-width: 480px; margin-left: auto; margin-right: auto; }
-  .btn-upload { background: var(--royal); color: white; border: none; border-radius: 8px; padding: 12px 28px; font-size: 14px; font-weight: 700; cursor: pointer; display: inline-block; }
-  .btn-upload:hover { background: var(--dark); }
-  #loading-panel { display: none; background: var(--card); border-radius: 14px; padding: 48px 32px; text-align: center; }
-  .spinner { width: 48px; height: 48px; border: 4px solid var(--border); border-top-color: var(--royal); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 20px; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  #loading-panel h3 { color: var(--royal); font-size: 16px; font-weight: 700; margin-bottom: 6px; }
-  #loading-panel p { color: var(--muted); font-size: 13px; }
-  #loading-steps { margin-top: 20px; display: flex; flex-direction: column; gap: 8px; max-width: 360px; margin-left: auto; margin-right: auto; }
-  .step { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); padding: 8px 14px; border-radius: 6px; background: var(--bg); }
-  .step.active { color: var(--royal); background: #eef2ff; font-weight: 600; }
-  .step.done { color: var(--pass); }
-  .step-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--grey); flex-shrink: 0; }
-  .step.active .step-dot { background: var(--royal); }
-  .step.done .step-dot { background: var(--pass); }
-  #results-panel { display: none; }
-  .results-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
-  .file-info { flex: 1; background: var(--card); border-radius: 10px; padding: 14px 18px; border: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
-  .file-info .file-icon { font-size: 24px; }
-  .file-info h3 { font-size: 14px; font-weight: 700; }
-  .file-info p { font-size: 12px; color: var(--muted); margin-top: 2px; }
-  .btn-new { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 18px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--text); }
-  .btn-new:hover { background: #e5e7eb; }
-  .score-pills { display: flex; gap: 10px; margin-bottom: 24px; flex-wrap: wrap; }
-  .score-pill { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 18px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: border-color 0.15s; flex: 1; min-width: 140px; }
-  .score-pill:hover { border-color: var(--royal); }
-  .score-pill.active { border-color: var(--royal); background: #eef2ff; }
-  .pill-icon { font-size: 22px; }
-  .pill-count { font-size: 26px; font-weight: 900; line-height: 1; }
-  .pill-count.has-error { color: var(--error); }
-  .pill-count.has-warn { color: var(--warn); }
-  .pill-count.none { color: var(--grey); }
-  .pill-label { font-size: 11px; color: var(--muted); font-weight: 600; margin-top: 2px; }
-  #viewer-container { display: grid; grid-template-columns: 1fr 360px; gap: 20px; align-items: start; }
-  @media (max-width: 900px) { #viewer-container { grid-template-columns: 1fr; } }
-  .pdf-viewer { background: var(--card); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
-  .pdf-nav { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; border-bottom: 1px solid var(--border); background: #fafafa; }
-  .pdf-nav button { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 6px 14px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--text); }
-  .pdf-nav button:disabled { opacity: 0.4; cursor: not-allowed; }
-  .pdf-nav button:not(:disabled):hover { background: var(--border); }
-  .pdf-nav span { font-size: 13px; color: var(--muted); font-weight: 600; }
-  #page-wrapper { position: relative; display: flex; justify-content: center; padding: 20px; background: #6b7280; min-height: 400px; }
-  #pdf-canvas { max-width: 100%; height: auto; display: block; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
-  #annotation-layer { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); pointer-events: none; }
-  .ann-marker { position: absolute; pointer-events: all; cursor: pointer; z-index: 10; }
-  .ann-dot { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; color: white; border: 2px solid rgba(255,255,255,0.8); box-shadow: 0 2px 8px rgba(0,0,0,0.35); transition: transform 0.15s; }
-  .ann-dot:hover { transform: scale(1.2); }
-  .ann-dot.type-error { background: var(--error); }
-  .ann-dot.type-warn { background: var(--warn); }
-  .ann-dot.type-brand { background: var(--royal); }
-  .ann-dot.type-style { background: #7c3aed; }
-  .ann-tooltip { position: absolute; left: 30px; top: 50%; transform: translateY(-50%); background: var(--text); color: white; border-radius: 8px; padding: 8px 12px; font-size: 12px; width: 220px; line-height: 1.5; box-shadow: 0 4px 16px rgba(0,0,0,0.25); pointer-events: none; opacity: 0; transition: opacity 0.15s; z-index: 20; }
-  .ann-marker:hover .ann-tooltip { opacity: 1; }
-  .ann-tooltip strong { display: block; color: var(--gold); margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
-  .issues-panel { background: var(--card); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; position: sticky; top: 84px; max-height: calc(100vh - 100px); display: flex; flex-direction: column; }
-  .issues-panel-header { padding: 14px 18px; border-bottom: 1px solid var(--border); background: #fafafa; }
-  .issues-panel-header h3 { font-size: 14px; font-weight: 700; color: var(--royal); margin-bottom: 8px; }
-  .filter-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
-  .filter-tab { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; cursor: pointer; border: none; background: var(--bg); color: var(--muted); }
-  .filter-tab.active { background: var(--royal); color: white; }
-  #issues-list { overflow-y: auto; flex: 1; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
-  .issue-card { border-radius: 8px; border-left: 3px solid var(--border); padding: 10px 12px; background: var(--bg); cursor: pointer; transition: background 0.1s; font-size: 13px; }
-  .issue-card:hover { background: #eef2ff; }
-  .issue-card.selected { background: #eef2ff; border-left-color: var(--royal); }
-  .issue-card.sev-error { border-left-color: var(--error); }
-  .issue-card.sev-warn { border-left-color: var(--warn); }
-  .issue-card.sev-brand { border-left-color: var(--royal); }
-  .issue-card.sev-style { border-left-color: #7c3aed; }
-  .issue-card-top { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 4px; }
-  .issue-type-badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; }
-  .badge-brand { background: rgba(0,53,148,0.12); color: var(--royal); }
-  .badge-style { background: rgba(124,58,237,0.12); color: #7c3aed; }
-  .issue-title { font-weight: 600; font-size: 13px; line-height: 1.3; flex: 1; }
-  .issue-desc { color: var(--muted); font-size: 12px; line-height: 1.4; }
-  .issue-quote { margin-top: 5px; font-size: 11px; color: #555; font-style: italic; background: #f3f4f6; padding: 3px 7px; border-radius: 4px; }
-  .issue-page { font-size: 11px; color: var(--muted); margin-top: 5px; font-weight: 600; }
-  #summary-box { background: var(--gold-light); border: 1px solid var(--gold); border-radius: 10px; padding: 16px 18px; margin-bottom: 20px; font-size: 13px; line-height: 1.6; color: var(--dark); display: none; }
-  .no-issues { text-align: center; padding: 32px 16px; color: var(--muted); }
-  .no-issues .ni-icon { font-size: 36px; margin-bottom: 8px; }
+:root {
+  --royal: #003594; --gold: #FFB81C; --gold-light: #FFF3CC;
+  --dark: #00205B; --error: #FF5B45; --warn: #F7911E;
+  --pass: #00AD6E; --bg: #f4f5f8; --card: #ffffff;
+  --border: #e2e4e9; --text: #1a1e2e; --muted: #6b7280;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Segoe UI", system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+header { background: var(--royal); padding: 0 32px; display: flex; align-items: center; gap: 16px; height: 64px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 12px rgba(0,0,0,0.2); }
+.logo { background: var(--gold); width: 40px; height: 40px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 22px; color: var(--royal); flex-shrink: 0; }
+header h1 { color: white; font-size: 17px; font-weight: 700; }
+header p { color: rgba(255,255,255,0.6); font-size: 12px; margin-top: 1px; }
+main { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
+.toggles { display: flex; gap: 12px; margin-bottom: 28px; flex-wrap: wrap; }
+.toggle { display: flex; align-items: center; gap: 8px; background: var(--card); border: 2px solid var(--border); border-radius: 8px; padding: 10px 16px; cursor: pointer; font-size: 14px; font-weight: 600; user-select: none; }
+.toggle.on { border-color: var(--royal); background: #eef2ff; color: var(--royal); }
+.toggle input { display: none; }
+#drop-zone { border: 2px dashed var(--royal); border-radius: 14px; padding: 56px 32px; text-align: center; background: var(--card); }
+#drop-zone.over { background: #eef2ff; border-color: var(--gold); }
+#drop-zone h2 { font-size: 20px; font-weight: 700; color: var(--royal); margin-bottom: 8px; }
+#drop-zone p { color: var(--muted); font-size: 14px; margin-bottom: 24px; max-width: 480px; margin-left: auto; margin-right: auto; }
+.pick-btn { background: var(--royal); color: white; border: none; border-radius: 8px; padding: 12px 28px; font-size: 14px; font-weight: 700; cursor: pointer; }
+.pick-btn:hover { background: var(--dark); }
+#loading { display: none; background: var(--card); border-radius: 14px; padding: 48px 32px; text-align: center; }
+.spinner { width: 48px; height: 48px; border: 4px solid var(--border); border-top-color: var(--royal); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 20px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+#loading h3 { color: var(--royal); font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+#loading p { color: var(--muted); font-size: 13px; }
+#results { display: none; }
+.rhead { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+.finfo { flex: 1; background: var(--card); border-radius: 10px; padding: 14px 18px; border: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+.finfo h3 { font-size: 14px; font-weight: 700; }
+.finfo p { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.new-btn { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 18px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.pills { display: flex; gap: 10px; margin-bottom: 24px; flex-wrap: wrap; }
+.pill { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 18px; display: flex; align-items: center; gap: 10px; cursor: pointer; flex: 1; min-width: 140px; }
+.pill.on { border-color: var(--royal); background: #eef2ff; }
+.pill-n { font-size: 26px; font-weight: 900; line-height: 1; }
+.pill-n.red { color: var(--error); }
+.pill-n.org { color: var(--warn); }
+.pill-n.grey { color: #C8C9C7; }
+.pill-lbl { font-size: 11px; color: var(--muted); font-weight: 600; margin-top: 2px; }
+#viewer { display: grid; grid-template-columns: 1fr 360px; gap: 20px; align-items: start; }
+@media (max-width: 900px) { #viewer { grid-template-columns: 1fr; } }
+.pdf-box { background: var(--card); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
+.pdf-nav { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; border-bottom: 1px solid var(--border); background: #fafafa; }
+.pdf-nav button { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 6px 14px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.pdf-nav button:disabled { opacity: 0.4; cursor: not-allowed; }
+.pdf-nav span { font-size: 13px; color: var(--muted); font-weight: 600; }
+#page-wrap { position: relative; display: flex; justify-content: center; padding: 20px; background: #6b7280; min-height: 400px; }
+#pdf-canvas { max-width: 100%; height: auto; display: block; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+#ann-layer { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); pointer-events: none; }
+.ann { position: absolute; pointer-events: all; cursor: pointer; z-index: 10; }
+.ann-dot { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; color: white; border: 2px solid rgba(255,255,255,0.8); box-shadow: 0 2px 8px rgba(0,0,0,0.35); transition: transform 0.15s; }
+.ann-dot:hover { transform: scale(1.2); }
+.ann-dot.e { background: var(--error); }
+.ann-dot.w { background: var(--warn); }
+.ann-dot.b { background: var(--royal); }
+.ann-dot.s { background: #7c3aed; }
+.ann-tip { position: absolute; left: 30px; top: 50%; transform: translateY(-50%); background: var(--text); color: white; border-radius: 8px; padding: 8px 12px; font-size: 12px; width: 220px; line-height: 1.5; box-shadow: 0 4px 16px rgba(0,0,0,0.25); pointer-events: none; opacity: 0; transition: opacity 0.15s; z-index: 20; }
+.ann:hover .ann-tip { opacity: 1; }
+.ann-tip strong { display: block; color: var(--gold); margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+.side { background: var(--card); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; position: sticky; top: 84px; max-height: calc(100vh - 100px); display: flex; flex-direction: column; }
+.side-head { padding: 14px 18px; border-bottom: 1px solid var(--border); background: #fafafa; }
+.side-head h3 { font-size: 14px; font-weight: 700; color: var(--royal); margin-bottom: 8px; }
+.ftabs { display: flex; gap: 4px; }
+.ftab { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; cursor: pointer; border: none; background: var(--bg); color: var(--muted); }
+.ftab.on { background: var(--royal); color: white; }
+#issue-list { overflow-y: auto; flex: 1; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.icard { border-radius: 8px; border-left: 3px solid var(--border); padding: 10px 12px; background: var(--bg); cursor: pointer; font-size: 13px; }
+.icard:hover { background: #eef2ff; }
+.icard.sel { background: #eef2ff; border-left-color: var(--royal); }
+.icard.be { border-left-color: var(--error); }
+.icard.bw { border-left-color: var(--warn); }
+.icard.bb { border-left-color: var(--royal); }
+.icard.bs { border-left-color: #7c3aed; }
+.itop { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 4px; }
+.badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; }
+.badge.br { background: rgba(0,53,148,0.12); color: var(--royal); }
+.badge.bs { background: rgba(124,58,237,0.12); color: #7c3aed; }
+.ititle { font-weight: 600; font-size: 13px; line-height: 1.3; flex: 1; }
+.idesc { color: var(--muted); font-size: 12px; line-height: 1.4; }
+.iquote { margin-top: 5px; font-size: 11px; color: #555; font-style: italic; background: #f3f4f6; padding: 3px 7px; border-radius: 4px; }
+.ipage { font-size: 11px; color: var(--muted); margin-top: 5px; font-weight: 600; }
+#summary { background: var(--gold-light); border: 1px solid var(--gold); border-radius: 10px; padding: 16px 18px; margin-bottom: 20px; font-size: 13px; line-height: 1.6; color: var(--dark); display: none; }
+.empty { text-align: center; padding: 32px 16px; color: var(--muted); font-size: 13px; }
 </style>
-<script src="https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.js"></script>
 </head>
 <body>
 <header>
-  <div class="logo-badge">P</div>
+  <div class="logo">P</div>
   <div>
     <h1>PITT DOCUMENT CHECKER</h1>
-    <p>Brand Guidelines v2.2 &middot; Writing Style Manual (3rd Ed.) &middot; No account required</p>
+    <p>Brand Guidelines v2.2 &middot; Writing Style Manual 3rd Ed. &middot; No account required</p>
   </div>
 </header>
 <main>
-  <div id="check-options">
-    <label class="check-toggle active" id="toggle-brand">
-      <input type="checkbox" id="check-brand" checked> 🎨 Brand Compliance
-    </label>
-    <label class="check-toggle active" id="toggle-style">
-      <input type="checkbox" id="check-style" checked> ✍️ Writing Style
-    </label>
+  <div class="toggles">
+    <label class="toggle on" id="tog-brand"><input type="checkbox" id="cb-brand" checked> &nbsp;Brand Compliance</label>
+    <label class="toggle on" id="tog-style"><input type="checkbox" id="cb-style" checked> &nbsp;Writing Style</label>
   </div>
 
-  <div id="upload-zone"
-    ondragover="event.preventDefault(); this.classList.add('drag-over')"
-    ondragleave="this.classList.remove('drag-over')"
-    ondrop="handleDrop(event)">
-    <span class="upload-icon">📄</span>
+  <div id="drop-zone">
     <h2>Drop your PDF to check it against Pitt standards</h2>
-    <p>Checks brand compliance and writing style with annotations directly on your document. No account or API key needed.</p>
-    <button class="btn-upload" onclick="document.getElementById('file-input').click()">Select PDF</button>
-    <input type="file" id="file-input" accept=".pdf" onchange="handleFile(event)" style="position:absolute;left:-9999px;opacity:0;">
+    <p>Checks brand compliance and writing style with annotations on your document. No account or API key needed.</p>
+    <button class="pick-btn" id="pick-btn">Select PDF</button>
+    <input type="file" id="file-input" accept=".pdf" style="display:none;">
   </div>
 
-  <div id="loading-panel">
+  <div id="loading">
     <div class="spinner"></div>
     <h3>Analyzing your document&hellip;</h3>
-    <p>Usually takes just a few seconds.</p>
-    <div id="loading-steps">
-      <div class="step active" id="step-render"><span class="step-dot"></span> Rendering PDF pages</div>
-      <div class="step" id="step-extract"><span class="step-dot"></span> Extracting text content</div>
-      <div class="step" id="step-check"><span class="step-dot"></span> Running compliance checks</div>
-      <div class="step" id="step-annotate"><span class="step-dot"></span> Placing annotations</div>
-    </div>
+    <p>Usually just a few seconds.</p>
   </div>
 
-  <div id="results-panel">
-    <div class="results-header">
-      <div class="file-info">
-        <span class="file-icon">📄</span>
+  <div id="results">
+    <div class="rhead">
+      <div class="finfo">
+        <span style="font-size:24px;">&#128196;</span>
         <div>
-          <h3 id="file-name-display">document.pdf</h3>
-          <p id="file-meta">0 pages &middot; 0 issues found</p>
+          <h3 id="fname">document.pdf</h3>
+          <p id="fmeta">0 pages &middot; 0 issues</p>
         </div>
       </div>
-      <button class="btn-new" onclick="resetTool()">↩ New document</button>
+      <button class="new-btn" id="new-btn">&#8617; New document</button>
     </div>
-    <div id="summary-box"></div>
-    <div class="score-pills">
-      <div class="score-pill active" onclick="filterIssues('all')" id="pill-all">
-        <span class="pill-icon">📋</span>
-        <div><div class="pill-count none" id="count-all">0</div><div class="pill-label">All Issues</div></div>
+    <div id="summary"></div>
+    <div class="pills">
+      <div class="pill on" id="pill-all" onclick="filter('all')">
+        <span style="font-size:22px;">&#128203;</span>
+        <div><div class="pill-n grey" id="cnt-all">0</div><div class="pill-lbl">All Issues</div></div>
       </div>
-      <div class="score-pill" onclick="filterIssues('brand')" id="pill-brand">
-        <span class="pill-icon">🎨</span>
-        <div><div class="pill-count has-error" id="count-brand">0</div><div class="pill-label">Brand</div></div>
+      <div class="pill" id="pill-brand" onclick="filter('brand')">
+        <span style="font-size:22px;">&#127912;</span>
+        <div><div class="pill-n red" id="cnt-brand">0</div><div class="pill-lbl">Brand</div></div>
       </div>
-      <div class="score-pill" onclick="filterIssues('style')" id="pill-style">
-        <span class="pill-icon">✍️</span>
-        <div><div class="pill-count has-warn" id="count-style">0</div><div class="pill-label">Writing Style</div></div>
+      <div class="pill" id="pill-style" onclick="filter('style')">
+        <span style="font-size:22px;">&#9997;&#65039;</span>
+        <div><div class="pill-n org" id="cnt-style">0</div><div class="pill-lbl">Writing Style</div></div>
       </div>
     </div>
-    <div id="viewer-container">
-      <div class="pdf-viewer">
+    <div id="viewer">
+      <div class="pdf-box">
         <div class="pdf-nav">
-          <button onclick="changePage(-1)" id="btn-prev">← Prev</button>
-          <span id="page-indicator">Page 1 of 1</span>
-          <button onclick="changePage(1)" id="btn-next">Next →</button>
+          <button id="btn-prev" onclick="goPage(-1)">&#8592; Prev</button>
+          <span id="page-ind">Page 1 of 1</span>
+          <button id="btn-next" onclick="goPage(1)">Next &#8594;</button>
         </div>
-        <div id="page-wrapper">
+        <div id="page-wrap">
           <canvas id="pdf-canvas"></canvas>
-          <div id="annotation-layer"></div>
+          <div id="ann-layer"></div>
         </div>
       </div>
-      <div class="issues-panel">
-        <div class="issues-panel-header">
+      <div class="side">
+        <div class="side-head">
           <h3>Issues Found</h3>
-          <div class="filter-tabs">
-            <button class="filter-tab active" onclick="filterIssues('all')">All</button>
-            <button class="filter-tab" onclick="filterIssues('brand')">Brand</button>
-            <button class="filter-tab" onclick="filterIssues('style')">Style</button>
+          <div class="ftabs">
+            <button class="ftab on" onclick="filter('all')">All</button>
+            <button class="ftab" onclick="filter('brand')">Brand</button>
+            <button class="ftab" onclick="filter('style')">Style</button>
           </div>
         </div>
-        <div id="issues-list"></div>
+        <div id="issue-list"></div>
       </div>
     </div>
   </div>
 </main>
 <script>
-// pdfjsLib loaded via script tag below
+(function() {
+  if (typeof pdfjsLib === "undefined") {
+    document.getElementById("drop-zone").innerHTML += "<p style='color:red;margin-top:16px;font-weight:bold;'>PDF reader failed to load. Check your connection and refresh.</p>";
+    return;
+  }
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js";
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.js';
-var pdfDoc = null, currentPage = 1, totalPages = 0;
-var allIssues = [], activeFilter = 'all';
-var pageCanvasWidth = 0, pageCanvasHeight = 0;
-var extractedPages = [];
+  var pdfDoc = null, curPage = 1, totPages = 0;
+  var issues = [], curFilter = "all";
+  var canW = 0, canH = 0;
 
-document.getElementById('check-brand').addEventListener('change', function() {
-  document.getElementById('toggle-brand').classList.toggle('active', this.checked);
-});
-document.getElementById('check-style').addEventListener('change', function() {
-  document.getElementById('toggle-style').classList.toggle('active', this.checked);
-});
+  document.getElementById("cb-brand").addEventListener("change", function() {
+    document.getElementById("tog-brand").classList.toggle("on", this.checked);
+  });
+  document.getElementById("cb-style").addEventListener("change", function() {
+    document.getElementById("tog-style").classList.toggle("on", this.checked);
+  });
 
-function handleDrop(e) {
-  e.preventDefault();
-  document.getElementById('upload-zone').classList.remove('drag-over');
-  var file = e.dataTransfer.files[0];
-  if (file && file.type === 'application/pdf') processFile(file);
-  else alert('Please upload a PDF file.');
-}
+  document.getElementById("pick-btn").addEventListener("click", function() {
+    document.getElementById("file-input").click();
+  });
 
-function handleFile(e) {
-  var file = e.target.files[0];
-  if (!file) { alert('No file selected.'); return; }
-  if (file.type !== 'application/pdf') { alert('Please select a PDF file. You selected: ' + file.type); return; }
-  processFile(file);
-}
+  document.getElementById("file-input").addEventListener("change", function() {
+    var f = this.files[0];
+    if (f) go(f);
+  });
 
-async function processFile(file) {
-  var checkBrand = document.getElementById('check-brand').checked;
-  var checkStyle = document.getElementById('check-style').checked;
-  if (!checkBrand && !checkStyle) { alert('Please select at least one check type.'); return; }
+  document.getElementById("new-btn").addEventListener("click", reset);
 
-  document.getElementById('upload-zone').style.display = 'none';
-  document.getElementById('check-options').style.display = 'none';
-  document.getElementById('loading-panel').style.display = 'block';
-  document.getElementById('results-panel').style.display = 'none';
+  var dz = document.getElementById("drop-zone");
+  dz.addEventListener("dragover", function(e) { e.preventDefault(); dz.classList.add("over"); });
+  dz.addEventListener("dragleave", function() { dz.classList.remove("over"); });
+  dz.addEventListener("drop", function(e) {
+    e.preventDefault(); dz.classList.remove("over");
+    var f = e.dataTransfer.files[0];
+    if (f && f.type === "application/pdf") go(f);
+    else alert("Please drop a PDF file.");
+  });
 
-  try {
-    setStep('render');
-    var arrayBuffer = await file.arrayBuffer();
-    pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    totalPages = pdfDoc.numPages;
-
-    setStep('extract');
-    extractedPages = [];
-    for (var i = 1; i <= totalPages; i++) {
-      var page = await pdfDoc.getPage(i);
-      var tc = await page.getTextContent();
-      var text = tc.items.map(function(it){ return it.str; }).join(' ');
-      extractedPages.push({ pageNum: i, text: text });
+  async function go(file) {
+    var doBrand = document.getElementById("cb-brand").checked;
+    var doStyle = document.getElementById("cb-style").checked;
+    if (!doBrand && !doStyle) { alert("Select at least one check type."); return; }
+    show("loading");
+    try {
+      var ab = await file.arrayBuffer();
+      pdfDoc = await pdfjsLib.getDocument({ data: ab }).promise;
+      totPages = pdfDoc.numPages;
+      var pages = [];
+      for (var i = 1; i <= totPages; i++) {
+        var pg = await pdfDoc.getPage(i);
+        var tc = await pg.getTextContent();
+        var txt = tc.items.map(function(it) { return it.str; }).join(" ");
+        pages.push({ n: i, t: txt });
+      }
+      issues = [];
+      if (doBrand) issues = issues.concat(brandCheck(pages));
+      if (doStyle) issues = issues.concat(styleCheck(pages));
+      curPage = 1;
+      await renderPage(curPage);
+      document.getElementById("fname").textContent = file.name;
+      document.getElementById("fmeta").textContent = totPages + " page" + (totPages !== 1 ? "s" : "") + " · " + issues.length + " issue" + (issues.length !== 1 ? "s" : "") + " found";
+      updateCounts();
+      renderList("all");
+      show("results");
+    } catch(err) {
+      show("drop-zone");
+      alert("Could not read PDF: " + (err.message || err));
     }
-
-    setStep('check');
-    allIssues = [];
-    if (checkBrand) allIssues = allIssues.concat(runBrandChecks(extractedPages));
-    if (checkStyle) allIssues = allIssues.concat(runStyleChecks(extractedPages));
-
-    setStep('annotate');
-    currentPage = 1;
-    await renderPage(currentPage);
-
-    document.getElementById('file-name-display').textContent = file.name;
-    document.getElementById('file-meta').textContent =
-      totalPages + ' page' + (totalPages!==1?'s':'') + ' \u00b7 ' + allIssues.length + ' issue' + (allIssues.length!==1?'s':'') + ' found';
-
-    updateCounts();
-    renderIssuesList('all');
-    document.getElementById('loading-panel').style.display = 'none';
-    document.getElementById('results-panel').style.display = 'block';
-
-  } catch(err) {
-    document.getElementById('loading-panel').style.display = 'none';
-    document.getElementById('upload-zone').style.display = 'block';
-    document.getElementById('check-options').style.display = 'flex';
-    var msg = err ? (err.message || err.toString()) : 'Unknown error';
-    alert('Error: ' + msg + '\n\nMake sure this is a text-based PDF (not a scanned image) and that you have an internet connection (required to load the PDF reader).');
-    console.error('PDF error:', err);
   }
-}
 
-function setStep(active) {
-  var steps = ['render','extract','check','annotate'];
-  steps.forEach(function(s) {
-    var el = document.getElementById('step-'+s);
-    var ai = steps.indexOf(active), si = steps.indexOf(s);
-    el.className = 'step' + (s===active?' active': si<ai?' done':'');
-  });
-}
-
-function runBrandChecks(pages) {
-  var issues = [];
-  var rules = [
-    { re: /hail\s+to\s+possible/gi, sev:'error', title:'"Hail to Possible" \u2014 UCM only', desc:'Reserved for institutional UCM-level use only. Schools and units must not use it. Use "It\'s Possible at Pitt" instead.', y:30 },
-    { re: /where\s+curiosity\s+becomes\s+reality|brand\s+purpose/gi, sev:'warn', title:'Internal brand language', desc:'"Where Curiosity Becomes Reality" is an internal gut-check tool only \u2014 do not use in external materials.', y:40 },
-    { re: /land\s+of\s+possibilities|people-driven\s+people|bridging\s+perspectives|renaissance\s+made\s+real/gi, sev:'warn', title:'Internal brand pillar language', desc:'Brand Pillars are internal framework language only \u2014 not for external materials.', y:40 },
-    { re: /\barial\b|\bhelvetica\b|\btimes\s+new\s+roman\b|\bcalibri\b|\bgaramond\b|\bfutura\b|\bgeorgia\b/gi, sev:'error', title:'Off-brand font detected', desc:'Arial, Helvetica, Times New Roman, Calibri, Garamond, Futura, and Georgia are not approved Pitt fonts. Use ATF Alternate Gothic (headlines) or Merriweather/Roboto (body).', y:35 },
-    { re: /#(?!003594|FFB81C|00205B|C8C9C7|B87333|FFFFFF|000000|ffffff|000000|DBEEFF|FFE939|66B2E3|00AD6E|F7911E|FF5B45|FFDECD|770538)[0-9A-Fa-f]{6}/g, sev:'warn', title:'Non-brand hex color', desc:'A hex color was found outside the approved Pitt palette. Primary: #003594 (Royal), #FFB81C (Gold). See brand.pitt.edu for full palette.', y:60 },
-    { re: /pitt\s+script|spirit\s+mark/gi, sev:'warn', title:'Pitt Script / Spirit Mark', desc:'Pitt Script is for athletics and spirit materials only. Academic units may use it on merchandise only \u2014 not on official communications.', y:50 },
-    { re: /university\s+seal/gi, sev:'warn', title:'University Seal \u2014 restricted use', desc:'Reserved for official institutional documents (diplomas, commencement) only. Exceptions require UCM approval.', y:50 },
-    { re: /informal\s+wordmark/gi, sev:'warn', title:'Informal Wordmark \u2014 internal only', desc:'The Informal Wordmark is for internal audiences only. Use the Institutional Mark for external materials.', y:50 },
-    { re: /paper\s+texture/gi, sev:'warn', title:'Paper texture \u2014 check opacity', desc:'Paper texture must be set to 30% opacity per brand guidelines.', y:70 },
-    { re: /unit\s+lockup|lockup\s+format/gi, sev:'warn', title:'Unit lockups \u2014 UCM only', desc:'Unit lockups must be created by the Office of University Communications. Do not typeset manually.', y:50 },
-  ];
-  pages.forEach(function(p) {
-    rules.forEach(function(rule) {
-      var matches = Array.from(p.text.matchAll(rule.re));
-      if (matches.length > 0) {
-        var m = matches[0];
-        var xPct = Math.min(90, Math.max(10, (m.index / Math.max(p.text.length,1)) * 80 + 10));
-        issues.push({ type:'brand', severity:rule.sev, page:p.pageNum, title:rule.title, description:rule.desc, quote:m[0].slice(0,60), xPercent:xPct, yPercent:rule.y });
-      }
+  function show(id) {
+    ["drop-zone","loading","results"].forEach(function(x) {
+      document.getElementById(x).style.display = x === id ? "block" : "none";
     });
-  });
-  return issues;
-}
-
-function runStyleChecks(pages) {
-  var issues = [];
-  var rules = [
-    { re: /\bu\s+of\s+pitt\b|\bu\s+of\s+pittsburgh\b|\bpitt\s+u\b/gi, sev:'error', title:'Incorrect University name', desc:'Never use "U of Pitt," "U of Pittsburgh," or "Pitt U." First ref: "University of Pittsburgh." Subsequent: "Pitt" or "the University."', y:20 },
-    { re: /office\s+of\s+university\s+communications\s+and\s+marketing/gi, sev:'error', title:'Outdated office name', desc:'3rd Ed.: The office is now "Office of University Communications" \u2014 "and Marketing" has been dropped.', y:25 },
-    { re: /\b(Spring|Summer|Fall|Winter)\s+(semester|term|break|session|quarter)/g, sev:'warn', title:'Season should be lowercase', desc:'Seasons are always lowercase: fall, spring, summer, winter.', y:30 },
-    { re: /\bSept\./g, sev:'warn', title:'Use "Sep." not "Sept."', desc:'3rd Ed.: September abbreviates to "Sep." not "Sept."', y:35 },
-    { re: /\(\d{3}\)\s*\d{3}[-.\s]\d{4}/g, sev:'warn', title:'Phone number format', desc:'3rd Ed.: Use hyphens, no parentheses: 412-624-4141 (not (412) 624-4141).', y:40 },
-    { re: /\+1[-.\s]\d{3}[-.\s]\d{3}[-.\s]\d{4}/g, sev:'warn', title:'+1 on local phone number', desc:'3rd Ed.: +1 is for toll-free numbers only. Format local: 412-624-4141.', y:40 },
-    { re: /\bPh\.D\.\b|\bM\.S\.\b|\bB\.A\.\b|\bB\.S\.\b|\bM\.A\.\b/g, sev:'warn', title:'Degree has periods', desc:'Pitt style: no periods in degrees. Use PhD, MS, BA, BS, MA.', y:45 },
-    { re: /\bbachelors\s+degree\b|\bmasters\s+degree\b/gi, sev:'error', title:'Degree missing apostrophe', desc:'Use "bachelor\'s degree" and "master\'s degree" \u2014 always with apostrophe s.', y:45 },
-    { re: /\bCMU\b/g, sev:'warn', title:'Use "Carnegie Mellon" not CMU', desc:'Never use "CMU." First ref: Carnegie Mellon University. Subsequent: Carnegie Mellon.', y:30 },
-    { re: /\bstaff\s+council\b/gi, sev:'error', title:'"Staff Council" \u2014 wrong name', desc:'3rd Ed.: The correct name is "Staff Association Council."', y:50 },
-    { re: /\bPitt\s+Police\b/g, sev:'warn', title:'"Pitt Police" \u2014 lowercase p', desc:'3rd Ed.: "Pitt police" is lowercase. Never "campus police."', y:50 },
-    { re: /\bhealthcare\b/gi, sev:'warn', title:'"Healthcare" \u2014 two words', desc:'Pitt style: "health care" is always two words.', y:55 },
-    { re: /\bUPMC\s+Health\s+System\b/g, sev:'error', title:'"UPMC Health System" \u2014 outdated', desc:'3rd Ed.: Do not use "UPMC Health System." Use UPMC after first full reference.', y:35 },
-    { re: /\bchairman\b/gi, sev:'warn', title:'"Chairman" \u2014 use "chair"', desc:'Use gender-inclusive "chair" or "chairperson."', y:55 },
-    { re: /\bfreshman\b|\bfreshmen\b/gi, sev:'warn', title:'"Freshman" \u2014 use "first-year student"', desc:'Use "first-year student(s)" instead of freshman/freshmen.', y:55 },
-    { re: /\bcongressman\b/gi, sev:'warn', title:'"Congressman" \u2014 use "congressperson"', desc:'3rd Ed.: Preferred replacement is "congressperson."', y:55 },
-    { re: /\bupperclassman\b|\bupperclassmen\b/gi, sev:'warn', title:'"Upperclassman" \u2014 use "upper-division student"', desc:'Use "upper-division student(s)."', y:55 },
-    { re: /\bmain\s+campus\b|\boakland\s+campus\b/gi, sev:'warn', title:'Campus reference', desc:'Never "main campus" or "Oakland campus." Use "Pittsburgh campus" or "Pittsburgh campus in Oakland."', y:50 },
-    { re: /\bbranch\s+campus/gi, sev:'warn', title:'"Branch campus" \u2014 not Pitt style', desc:'Do not refer to regional campuses as "branch campuses."', y:50 },
-    { re: /\s{2,}/g, sev:'warn', title:'Double spaces found', desc:'Use one space after periods and colons \u2014 never two.', y:65 },
-    { re: /\s\u2014\s/g, sev:'warn', title:'Em dash has spaces', desc:'Em dashes have no spaces on either side\u2014like this.', y:65 },
-    { re: /\butilize\b/gi, sev:'warn', title:'"Utilize" \u2014 use "use"', desc:'Avoid "utilize" \u2014 use "use" instead.', y:60 },
-    { re: /\birregardless\b/gi, sev:'error', title:'"Irregardless" \u2014 use "regardless"', desc:'"Irregardless" is nonstandard. Use "regardless."', y:60 },
-    { re: /\bis\s+comprised\s+of\b/gi, sev:'warn', title:'"Is comprised of" \u2014 incorrect', desc:'Never "is comprised of." Use "comprises," "consists of," or "is composed of."', y:60 },
-    { re: /\bneeds\s+(washed|fixed|cleaned|done|painted|repaired|updated)\b/gi, sev:'warn', title:'Pittsburghese construction', desc:'Use "needs to be [past participle]" \u2014 e.g., "needs to be washed."', y:70 },
-    { re: /\badvicer\b/gi, sev:'error', title:'Misspelled "advisor"', desc:'Pitt preferred spelling is "advisor."', y:50 },
-    { re: /\balright\b/gi, sev:'warn', title:'"Alright" \u2014 use "all right"', desc:'Pitt style: "all right" (two words).', y:60 },
-  ];
-  pages.forEach(function(p) {
-    rules.forEach(function(rule) {
-      var matches = Array.from(p.text.matchAll(rule.re));
-      if (matches.length > 0) {
-        var m = matches[0];
-        var xPct = Math.min(90, Math.max(10, (m.index / Math.max(p.text.length,1)) * 80 + 10));
-        issues.push({ type:'style', severity:rule.sev, page:p.pageNum, title:rule.title, description:rule.desc, quote:m[0].slice(0,60), xPercent:xPct, yPercent:rule.y });
-      }
-    });
-  });
-  return issues;
-}
-
-async function renderPage(num) {
-  var page = await pdfDoc.getPage(num);
-  var vp = page.getViewport({ scale: 1.5 });
-  var canvas = document.getElementById('pdf-canvas');
-  var ctx = canvas.getContext('2d');
-  canvas.width = vp.width; canvas.height = vp.height;
-  pageCanvasWidth = vp.width; pageCanvasHeight = vp.height;
-  await page.render({ canvasContext: ctx, viewport: vp }).promise;
-  var al = document.getElementById('annotation-layer');
-  al.style.width = vp.width + 'px'; al.style.height = vp.height + 'px';
-  document.getElementById('page-indicator').textContent = 'Page ' + num + ' of ' + totalPages;
-  document.getElementById('btn-prev').disabled = num <= 1;
-  document.getElementById('btn-next').disabled = num >= totalPages;
-  renderAnnotations(num);
-}
-
-async function changePage(delta) {
-  var n = currentPage + delta;
-  if (n < 1 || n > totalPages) return;
-  currentPage = n;
-  await renderPage(currentPage);
-}
-
-function renderAnnotations(pageNum) {
-  var layer = document.getElementById('annotation-layer');
-  layer.innerHTML = '';
-  var visible = allIssues.filter(function(i){ return (activeFilter==='all'||i.type===activeFilter) && i.page===pageNum; });
-  visible.forEach(function(iss, idx) {
-    var marker = document.createElement('div');
-    marker.className = 'ann-marker';
-    var x = (iss.xPercent / 100) * pageCanvasWidth;
-    var y = (iss.yPercent / 100) * pageCanvasHeight;
-    marker.style.left = x + 'px';
-    marker.style.top = (y - 12) + 'px';
-    var tc = iss.severity==='error' ? 'type-error' : iss.type==='brand' ? 'type-brand' : 'type-style';
-    var desc = iss.description.length > 100 ? iss.description.slice(0,100)+'...' : iss.description;
-    marker.innerHTML = '<div class="ann-dot '+tc+'">'+(idx+1)+'</div><div class="ann-tooltip"><strong>'+(iss.type==='brand'?'🎨 Brand':'✍️ Style')+' \u00b7 '+iss.severity+'</strong>'+iss.title+'<br><span style="color:rgba(255,255,255,0.7);font-size:11px">'+desc+'</span></div>';
-    marker.addEventListener('click', function() {
-      var gi = allIssues.indexOf(iss);
-      var card = document.querySelector('[data-issue-idx="'+gi+'"]');
-      if (card) { card.scrollIntoView({ behavior:'smooth', block:'nearest' }); document.querySelectorAll('.issue-card').forEach(function(c){ c.classList.remove('selected'); }); card.classList.add('selected'); }
-    });
-    layer.appendChild(marker);
-  });
-}
-
-function renderIssuesList(filter) {
-  var list = document.getElementById('issues-list');
-  var filtered = allIssues.filter(function(i){ return filter==='all'||i.type===filter; });
-  document.querySelectorAll('.filter-tab').forEach(function(tab){ tab.classList.toggle('active', tab.textContent.toLowerCase()===filter||(filter==='all'&&tab.textContent==='All')); });
-  document.querySelectorAll('.score-pill').forEach(function(pill){ pill.classList.toggle('active', pill.id==='pill-'+filter); });
-  if (filtered.length===0) { list.innerHTML='<div class="no-issues"><div class="ni-icon">✅</div><p>No '+(filter==='all'?'':filter+' ')+'issues found.</p></div>'; return; }
-  list.innerHTML = filtered.map(function(iss) {
-    var gi = allIssues.indexOf(iss);
-    var bc = iss.type==='brand'?'badge-brand':'badge-style';
-    var sc = iss.severity==='error'?'sev-error':iss.type==='brand'?'sev-brand':'sev-style';
-    var tl = iss.type==='brand'?'🎨 Brand':'✍️ Style';
-    return '<div class="issue-card '+sc+'" data-issue-idx="'+gi+'" data-page="'+iss.page+'" onclick="jumpToIssue('+gi+')">'
-      +'<div class="issue-card-top"><span class="issue-type-badge '+bc+'">'+tl+'</span><span class="issue-title">'+iss.title+'</span></div>'
-      +'<div class="issue-desc">'+iss.description+'</div>'
-      +(iss.quote?'<div class="issue-quote">"'+iss.quote+'"</div>':'')
-      +'<div class="issue-page">Page '+iss.page+'</div></div>';
-  }).join('');
-}
-
-async function jumpToIssue(gi) {
-  var iss = allIssues[gi];
-  if (!iss) return;
-  if (currentPage !== iss.page) { currentPage = iss.page; await renderPage(currentPage); }
-  document.querySelectorAll('.issue-card').forEach(function(c){ c.classList.remove('selected'); });
-  var card = document.querySelector('[data-issue-idx="'+gi+'"]');
-  if (card) card.classList.add('selected');
-}
-
-function filterIssues(filter) {
-  activeFilter = filter;
-  renderIssuesList(filter);
-  renderAnnotations(currentPage);
-}
-
-function updateCounts() {
-  var b = allIssues.filter(function(i){ return i.type==='brand'; }).length;
-  var s = allIssues.filter(function(i){ return i.type==='style'; }).length;
-  document.getElementById('count-all').textContent = allIssues.length;
-  document.getElementById('count-brand').textContent = b;
-  document.getElementById('count-style').textContent = s;
-  document.getElementById('count-all').className = 'pill-count '+(allIssues.length>0?'has-error':'none');
-  document.getElementById('count-brand').className = 'pill-count '+(b>0?'has-error':'none');
-  document.getElementById('count-style').className = 'pill-count '+(s>0?'has-warn':'none');
-  if (allIssues.length > 0) {
-    var errs = allIssues.filter(function(i){ return i.severity==='error'; }).length;
-    var warns = allIssues.filter(function(i){ return i.severity==='warn'; }).length;
-    var box = document.getElementById('summary-box');
-    box.style.display = 'block';
-    box.innerHTML = '<strong>Summary:</strong> Found '+allIssues.length+' issue'+(allIssues.length!==1?'s':'')+' \u2014 '
-      +(errs>0?'<strong style="color:var(--error)">'+errs+' error'+(errs!==1?'s':'')+'</strong>':'0 errors')+' and '
-      +(warns>0?'<strong style="color:var(--warn)">'+warns+' warning'+(warns!==1?'s':'')+'</strong>':'0 warnings')+'.'
-      +(b>0?' '+b+' brand issue'+(b!==1?'s':'')+'.')+(s>0?' '+s+' style issue'+(s!==1?'s':'')+'.')
-      +' Click any numbered marker or card to navigate.';
+    if (id !== "drop-zone") document.querySelector(".toggles").style.display = "none";
+    else document.querySelector(".toggles").style.display = "flex";
   }
-}
 
-function resetTool() {
-  pdfDoc = null; currentPage = 1; totalPages = 0;
-  allIssues = []; activeFilter = 'all'; extractedPages = [];
-  document.getElementById('results-panel').style.display = 'none';
-  document.getElementById('upload-zone').style.display = 'block';
-  document.getElementById('check-options').style.display = 'flex';
-  document.getElementById('summary-box').style.display = 'none';
-  document.getElementById('file-input').value = '';
-  document.getElementById('annotation-layer').innerHTML = '';
-}
+  function reset() {
+    pdfDoc = null; curPage = 1; totPages = 0; issues = []; curFilter = "all";
+    document.getElementById("file-input").value = "";
+    document.getElementById("ann-layer").innerHTML = "";
+    document.getElementById("summary").style.display = "none";
+    show("drop-zone");
+  }
+
+  async function renderPage(n) {
+    var pg = await pdfDoc.getPage(n);
+    var vp = pg.getViewport({ scale: 1.5 });
+    var c = document.getElementById("pdf-canvas");
+    c.width = vp.width; c.height = vp.height;
+    canW = vp.width; canH = vp.height;
+    await pg.render({ canvasContext: c.getContext("2d"), viewport: vp }).promise;
+    var al = document.getElementById("ann-layer");
+    al.style.width = vp.width + "px"; al.style.height = vp.height + "px";
+    document.getElementById("page-ind").textContent = "Page " + n + " of " + totPages;
+    document.getElementById("btn-prev").disabled = n <= 1;
+    document.getElementById("btn-next").disabled = n >= totPages;
+    drawAnns(n);
+  }
+
+  window.goPage = async function(d) {
+    var n = curPage + d;
+    if (n < 1 || n > totPages) return;
+    curPage = n;
+    await renderPage(curPage);
+  };
+
+  function drawAnns(pageNum) {
+    var al = document.getElementById("ann-layer");
+    al.innerHTML = "";
+    var vis = issues.filter(function(i) { return (curFilter === "all" || i.type === curFilter) && i.page === pageNum; });
+    vis.forEach(function(iss, idx) {
+      var m = document.createElement("div");
+      m.className = "ann";
+      m.style.left = ((iss.x / 100) * canW) + "px";
+      m.style.top = (((iss.y / 100) * canH) - 12) + "px";
+      var dc = iss.sev === "error" ? "e" : iss.type === "brand" ? "b" : "s";
+      var lbl = iss.type === "brand" ? "Brand" : "Style";
+      var desc = iss.desc.length > 100 ? iss.desc.slice(0, 100) + "..." : iss.desc;
+      m.innerHTML = "<div class='ann-dot " + dc + "'>" + (idx + 1) + "</div><div class='ann-tip'><strong>" + lbl + " · " + iss.sev + "</strong>" + iss.title + "<br><span style='color:rgba(255,255,255,0.7);font-size:11px'>" + desc + "</span></div>";
+      m.addEventListener("click", function() {
+        var gi = issues.indexOf(iss);
+        var card = document.querySelector("[data-gi='" + gi + "']");
+        if (card) { card.scrollIntoView({ behavior: "smooth", block: "nearest" }); document.querySelectorAll(".icard").forEach(function(c) { c.classList.remove("sel"); }); card.classList.add("sel"); }
+      });
+      al.appendChild(m);
+    });
+  }
+
+  window.filter = function(f) {
+    curFilter = f;
+    renderList(f);
+    drawAnns(curPage);
+    document.querySelectorAll(".pill").forEach(function(p) { p.classList.toggle("on", p.id === "pill-" + f); });
+    document.querySelectorAll(".ftab").forEach(function(t) { t.classList.toggle("on", t.textContent.toLowerCase() === f || (f === "all" && t.textContent === "All")); });
+  };
+
+  function renderList(f) {
+    var list = document.getElementById("issue-list");
+    var filtered = issues.filter(function(i) { return f === "all" || i.type === f; });
+    if (filtered.length === 0) { list.innerHTML = "<div class='empty'>No " + (f === "all" ? "" : f + " ") + "issues found.</div>"; return; }
+    list.innerHTML = filtered.map(function(iss) {
+      var gi = issues.indexOf(iss);
+      var bc = iss.sev === "error" ? "be" : iss.type === "brand" ? "bb" : "bs";
+      var bdg = iss.type === "brand" ? "br" : "bs";
+      return "<div class='icard " + bc + "' data-gi='" + gi + "' data-page='" + iss.page + "' onclick='jumpTo(" + gi + ")'><div class='itop'><span class='badge " + bdg + "'>" + (iss.type === "brand" ? "Brand" : "Style") + "</span><span class='ititle'>" + iss.title + "</span></div><div class='idesc'>" + iss.desc + "</div>" + (iss.quote ? "<div class='iquote'>&ldquo;" + iss.quote + "&rdquo;</div>" : "") + "<div class='ipage'>Page " + iss.page + "</div></div>";
+    }).join("");
+  }
+
+  window.jumpTo = async function(gi) {
+    var iss = issues[gi];
+    if (!iss) return;
+    if (curPage !== iss.page) { curPage = iss.page; await renderPage(curPage); }
+    document.querySelectorAll(".icard").forEach(function(c) { c.classList.remove("sel"); });
+    var card = document.querySelector("[data-gi='" + gi + "']");
+    if (card) card.classList.add("sel");
+  };
+
+  function updateCounts() {
+    var b = issues.filter(function(i) { return i.type === "brand"; }).length;
+    var s = issues.filter(function(i) { return i.type === "style"; }).length;
+    document.getElementById("cnt-all").textContent = issues.length;
+    document.getElementById("cnt-brand").textContent = b;
+    document.getElementById("cnt-style").textContent = s;
+    document.getElementById("cnt-all").className = "pill-n " + (issues.length > 0 ? "red" : "grey");
+    if (issues.length > 0) {
+      var errs = issues.filter(function(i) { return i.sev === "error"; }).length;
+      var el = document.getElementById("summary");
+      el.style.display = "block";
+      el.innerHTML = "<strong>Summary:</strong> " + issues.length + " issue" + (issues.length !== 1 ? "s" : "") + " found — " + errs + " error" + (errs !== 1 ? "s" : "") + ", " + (issues.length - errs) + " warning" + ((issues.length - errs) !== 1 ? "s" : "") + ". Click any marker or card to navigate.";
+    }
+  }
+
+  function mk(type, sev, page, title, desc, quote, x, y) {
+    return { type: type, sev: sev, page: page, title: title, desc: desc, quote: quote || "", x: x, y: y };
+  }
+
+  function check(pages, rules, type) {
+    var out = [];
+    pages.forEach(function(pg) {
+      rules.forEach(function(r) {
+        var matches = Array.from(pg.t.matchAll(r.re));
+        if (matches.length > 0) {
+          var m = matches[0];
+          var xp = Math.min(90, Math.max(10, (m.index / Math.max(pg.t.length, 1)) * 80 + 10));
+          out.push(mk(type, r.sev, pg.n, r.title, r.desc, m[0].slice(0, 60), xp, r.y));
+        }
+      });
+    });
+    return out;
+  }
+
+  function brandCheck(pages) {
+    return check(pages, [
+      { re: /hail\s+to\s+possible/gi, sev:"error", title:"Hail to Possible — UCM only", desc:"Reserved for institutional UCM-level use only. Schools/units must not use it. Use \"It's Possible at Pitt\" instead.", y:30 },
+      { re: /where\s+curiosity\s+becomes\s+reality/gi, sev:"warn", title:"Internal brand language", desc:"\"Where Curiosity Becomes Reality\" is an internal gut-check only — not for external materials.", y:40 },
+      { re: /land\s+of\s+possibilities|people-driven\s+people|bridging\s+perspectives|renaissance\s+made\s+real/gi, sev:"warn", title:"Internal brand pillar language", desc:"Brand Pillars are internal framework language only — not for external materials.", y:40 },
+      { re: /\barial\b|\bhelvetica\b|\btimes\s+new\s+roman\b|\bcalibri\b|\bgaramond\b|\bfutura\b|\bgeorgia\b/gi, sev:"error", title:"Off-brand font detected", desc:"Arial, Helvetica, Times New Roman, Calibri, Garamond, Futura, Georgia are not approved Pitt fonts. Use ATF Alternate Gothic or Merriweather/Roboto.", y:35 },
+      { re: /pitt\s+script|spirit\s+mark/gi, sev:"warn", title:"Pitt Script — check usage", desc:"Pitt Script is for athletics and spirit materials only. Academic units: merchandise only, not official communications.", y:50 },
+      { re: /university\s+seal/gi, sev:"warn", title:"University Seal — restricted", desc:"Reserved for official docs (diplomas, commencement) only. Exceptions require UCM approval.", y:50 },
+      { re: /informal\s+wordmark/gi, sev:"warn", title:"Informal Wordmark — internal only", desc:"For internal audiences only. Use the Institutional Mark for external materials.", y:50 },
+      { re: /paper\s+texture/gi, sev:"warn", title:"Paper texture — check opacity", desc:"Paper texture must be set to 30% opacity per brand guidelines.", y:70 },
+      { re: /unit\s+lockup/gi, sev:"warn", title:"Unit lockups — UCM only", desc:"Unit lockups must be created by the Office of University Communications only.", y:50 },
+    ], "brand");
+  }
+
+  function styleCheck(pages) {
+    return check(pages, [
+      { re: /\bu\s+of\s+pitt\b|\bu\s+of\s+pittsburgh\b|\bpitt\s+u\b/gi, sev:"error", title:"Wrong University name", desc:"Never: U of Pitt, U of Pittsburgh, Pitt U. First ref: \"University of Pittsburgh.\" Then: \"Pitt\" or \"the University.\"", y:20 },
+      { re: /office\s+of\s+university\s+communications\s+and\s+marketing/gi, sev:"error", title:"Outdated office name", desc:"3rd Ed.: Now \"Office of University Communications\" — \"and Marketing\" has been dropped.", y:25 },
+      { re: /\b(Spring|Summer|Fall|Winter)\s+(semester|term|break|session)/g, sev:"warn", title:"Season should be lowercase", desc:"Seasons are always lowercase: fall, spring, summer, winter.", y:30 },
+      { re: /\bSept\./g, sev:"warn", title:"Use Sep. not Sept.", desc:"3rd Ed.: September abbreviates to \"Sep.\" not \"Sept.\"", y:35 },
+      { re: /\(\d{3}\)\s*\d{3}[-.]\d{4}/g, sev:"warn", title:"Phone number format", desc:"3rd Ed.: Use hyphens, no parentheses: 412-624-4141 (not (412) 624-4141).", y:40 },
+      { re: /\+1[-.]\d{3}[-.]\d{3}[-.]\d{4}/g, sev:"warn", title:"+1 on local phone", desc:"3rd Ed.: +1 is for toll-free numbers only. Local format: 412-624-4141.", y:40 },
+      { re: /\bPh\.D\.\b|\bM\.S\.\b|\bB\.A\.\b|\bB\.S\.\b/g, sev:"warn", title:"Degree has periods", desc:"No periods in degrees: PhD, MS, BA, BS — not Ph.D., M.S., etc.", y:45 },
+      { re: /\bbachelors\s+degree\b|\bmasters\s+degree\b/gi, sev:"error", title:"Degree missing apostrophe", desc:"Use \"bachelor's degree\" and \"master's degree\" — always with apostrophe.", y:45 },
+      { re: /\bCMU\b/g, sev:"warn", title:"Use Carnegie Mellon not CMU", desc:"Never CMU. First ref: Carnegie Mellon University. Then: Carnegie Mellon.", y:30 },
+      { re: /\bstaff\s+council\b/gi, sev:"error", title:"Wrong name: Staff Council", desc:"3rd Ed.: Correct name is \"Staff Association Council.\"", y:50 },
+      { re: /\bPitt\s+Police\b/g, sev:"warn", title:"Pitt Police — lowercase p", desc:"3rd Ed.: \"Pitt police\" is lowercase. Never \"campus police.\"", y:50 },
+      { re: /\bhealthcare\b/gi, sev:"warn", title:"Healthcare — two words", desc:"Pitt style: \"health care\" is always two words.", y:55 },
+      { re: /\bUPMC\s+Health\s+System\b/g, sev:"error", title:"UPMC Health System — outdated", desc:"3rd Ed.: Do not use. First ref: University of Pittsburgh Medical Center (UPMC). Then: UPMC.", y:35 },
+      { re: /\bchairman\b/gi, sev:"warn", title:"Chairman — use chair", desc:"Use gender-inclusive \"chair\" or \"chairperson.\"", y:55 },
+      { re: /\bfreshman\b|\bfreshmen\b/gi, sev:"warn", title:"Freshman — use first-year student", desc:"Use \"first-year student(s)\" instead.", y:55 },
+      { re: /\bmain\s+campus\b|\boakland\s+campus\b/gi, sev:"warn", title:"Wrong campus reference", desc:"Never \"main campus\" or \"Oakland campus.\" Use \"Pittsburgh campus.\"", y:50 },
+      { re: /\butilize\b/gi, sev:"warn", title:"Utilize — use \"use\"", desc:"Avoid \"utilize\" — use \"use\" instead.", y:60 },
+      { re: /\birregardless\b/gi, sev:"error", title:"Irregardless — use regardless", desc:"\"Irregardless\" is nonstandard. Use \"regardless.\"", y:60 },
+      { re: /\bneeds\s+(washed|fixed|cleaned|done|painted)\b/gi, sev:"warn", title:"Pittsburghese construction", desc:"Use \"needs to be [past participle]\" e.g. \"needs to be washed.\"", y:70 },
+      { re: /\balright\b/gi, sev:"warn", title:"Alright — use all right", desc:"Pitt style: \"all right\" (two words).", y:60 },
+    ], "style");
+  }
+
+})();
 </script>
 </body>
 </html>
