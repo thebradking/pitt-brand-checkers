@@ -4,141 +4,147 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pitt Document Checker</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+<title>Pitt Brand &amp; Style Checker</title>
 <style>
-:root { --royal:#003594;--gold:#FFB81C;--gold-light:#FFF3CC;--dark:#00205B;--error:#FF5B45;--warn:#F7911E;--pass:#00AD6E;--bg:#f4f5f8;--card:#ffffff;--border:#e2e4e9;--text:#1a1e2e;--muted:#6b7280; }
+:root{--royal:#003594;--gold:#FFB81C;--gold-light:#FFF3CC;--dark:#00205B;--error:#FF5B45;--warn:#F7911E;--pass:#00AD6E;--bg:#f4f5f8;--card:#fff;--border:#e2e4e9;--text:#1a1e2e;--muted:#6b7280;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:"Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
-header{background:var(--royal);padding:0 32px;display:flex;align-items:center;gap:16px;height:64px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,0.2);}
+header{background:var(--royal);padding:0 32px;display:flex;align-items:center;gap:16px;height:64px;position:sticky;top:0;z-index:200;box-shadow:0 2px 12px rgba(0,0,0,0.2);}
 .logo{background:var(--gold);width:40px;height:40px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:22px;color:var(--royal);flex-shrink:0;}
 header h1{color:white;font-size:17px;font-weight:700;}
 header p{color:rgba(255,255,255,0.6);font-size:12px;margin-top:1px;}
-main{max-width:1200px;margin:0 auto;padding:32px 24px;}
-.toggles{display:flex;gap:12px;margin-bottom:28px;flex-wrap:wrap;}
-.toggle{display:flex;align-items:center;gap:8px;background:var(--card);border:2px solid var(--border);border-radius:8px;padding:10px 16px;cursor:pointer;font-size:14px;font-weight:600;user-select:none;}
+main{max-width:1280px;margin:0 auto;padding:32px 24px;}
+
+/* URL INPUT */
+#input-panel{background:var(--card);border-radius:14px;padding:40px 32px;text-align:center;border:1px solid var(--border);margin-bottom:24px;}
+#input-panel h2{font-size:22px;font-weight:700;color:var(--royal);margin-bottom:8px;}
+#input-panel p{color:var(--muted);font-size:14px;margin-bottom:28px;max-width:520px;margin-left:auto;margin-right:auto;}
+.url-row{display:flex;gap:10px;max-width:640px;margin:0 auto 20px;}
+#url-input{flex:1;border:2px solid var(--border);border-radius:8px;padding:12px 16px;font-size:14px;font-family:inherit;outline:none;transition:border-color 0.15s;}
+#url-input:focus{border-color:var(--royal);}
+.check-btn{background:var(--royal);color:white;border:none;border-radius:8px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;}
+.check-btn:hover{background:var(--dark);}
+.toggles{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+.toggle{display:flex;align-items:center;gap:8px;background:var(--bg);border:2px solid var(--border);border-radius:8px;padding:9px 16px;cursor:pointer;font-size:13px;font-weight:600;user-select:none;}
 .toggle.on{border-color:var(--royal);background:#eef2ff;color:var(--royal);}
 .toggle input{display:none;}
-#drop-zone{border:2px dashed var(--royal);border-radius:14px;padding:56px 32px;text-align:center;background:var(--card);}
-#drop-zone.over{background:#eef2ff;border-color:var(--gold);}
-#drop-zone h2{font-size:20px;font-weight:700;color:var(--royal);margin-bottom:8px;}
-#drop-zone p{color:var(--muted);font-size:14px;margin-bottom:24px;max-width:480px;margin-left:auto;margin-right:auto;}
-.pick-btn{background:var(--royal);color:white;border:none;border-radius:8px;padding:12px 28px;font-size:14px;font-weight:700;cursor:pointer;}
-.pick-btn:hover{background:var(--dark);}
-#loading{display:none;background:var(--card);border-radius:14px;padding:48px 32px;text-align:center;}
+
+/* LOADING */
+#loading{display:none;background:var(--card);border-radius:14px;padding:48px;text-align:center;border:1px solid var(--border);}
 .spinner{width:48px;height:48px;border:4px solid var(--border);border-top-color:var(--royal);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 20px;}
 @keyframes spin{to{transform:rotate(360deg);}}
 #loading h3{color:var(--royal);font-size:16px;font-weight:700;margin-bottom:6px;}
 #loading p{color:var(--muted);font-size:13px;}
+#load-step{margin-top:8px;color:var(--royal);font-size:13px;font-weight:600;}
+
+/* RESULTS */
 #results{display:none;}
-.rhead{display:flex;align-items:center;gap:16px;margin-bottom:24px;flex-wrap:wrap;}
-.finfo{flex:1;background:var(--card);border-radius:10px;padding:14px 18px;border:1px solid var(--border);display:flex;align-items:center;gap:12px;}
-.finfo h3{font-size:14px;font-weight:700;}
-.finfo p{font-size:12px;color:var(--muted);margin-top:2px;}
-.new-btn{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 18px;font-size:13px;font-weight:600;cursor:pointer;}
-.pills{display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap;}
-.pill{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 18px;display:flex;align-items:center;gap:10px;cursor:pointer;flex:1;min-width:140px;}
-.pill.on{border-color:var(--royal);background:#eef2ff;}
+.res-header{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;}
+.url-badge{flex:1;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 16px;font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.url-badge strong{color:var(--text);}
+.new-btn{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;}
+
+/* PILLS */
+.pills{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
+.pill{background:var(--card);border:2px solid var(--border);border-radius:10px;padding:12px 18px;display:flex;align-items:center;gap:10px;cursor:pointer;flex:1;min-width:130px;transition:border-color 0.15s;}
+.pill:hover,.pill.on{border-color:var(--royal);background:#eef2ff;}
 .pill-n{font-size:26px;font-weight:900;line-height:1;}
-.pill-n.red{color:var(--error);}
-.pill-n.org{color:var(--warn);}
-.pill-n.grey{color:#C8C9C7;}
+.pill-n.r{color:var(--error);}
+.pill-n.o{color:var(--warn);}
+.pill-n.g{color:#C8C9C7;}
 .pill-lbl{font-size:11px;color:var(--muted);font-weight:600;margin-top:2px;}
-#viewer{display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start;}
-@media(max-width:900px){#viewer{grid-template-columns:1fr;}}
-.pdf-box{background:var(--card);border-radius:12px;border:1px solid var(--border);overflow:hidden;}
-.pdf-nav{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--border);background:#fafafa;}
-.pdf-nav button{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 14px;font-size:13px;font-weight:600;cursor:pointer;}
-.pdf-nav button:disabled{opacity:0.4;cursor:not-allowed;}
-.pdf-nav span{font-size:13px;color:var(--muted);font-weight:600;}
-#page-wrap{position:relative;display:flex;justify-content:center;padding:20px;background:#6b7280;min-height:400px;}
-#pdf-canvas{max-width:100%;height:auto;display:block;box-shadow:0 4px 20px rgba(0,0,0,0.3);}
-#ann-layer{position:absolute;top:20px;left:50%;transform:translateX(-50%);pointer-events:none;}
-.ann{position:absolute;pointer-events:all;cursor:pointer;z-index:10;}
-.ann-dot{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:white;border:2px solid rgba(255,255,255,0.8);box-shadow:0 2px 8px rgba(0,0,0,0.35);transition:transform 0.15s;}
-.ann-dot:hover{transform:scale(1.2);}
-.ann-dot.e{background:var(--error);}
-.ann-dot.w{background:var(--warn);}
-.ann-dot.b{background:var(--royal);}
-.ann-dot.s{background:#7c3aed;}
-.ann-tip{position:absolute;left:30px;top:50%;transform:translateY(-50%);background:var(--text);color:white;border-radius:8px;padding:8px 12px;font-size:12px;width:220px;line-height:1.5;box-shadow:0 4px 16px rgba(0,0,0,0.25);pointer-events:none;opacity:0;transition:opacity 0.15s;z-index:20;}
-.ann:hover .ann-tip{opacity:1;}
-.ann-tip strong{display:block;color:var(--gold);margin-bottom:4px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;}
-.side{background:var(--card);border-radius:12px;border:1px solid var(--border);overflow:hidden;position:sticky;top:84px;max-height:calc(100vh - 100px);display:flex;flex-direction:column;}
+
+/* MAIN LAYOUT */
+#layout{display:grid;grid-template-columns:1fr 380px;gap:20px;align-items:start;}
+@media(max-width:960px){#layout{grid-template-columns:1fr;}}
+
+/* PAGE PREVIEW */
+#preview-box{background:var(--card);border-radius:12px;border:1px solid var(--border);overflow:hidden;}
+.preview-bar{padding:10px 16px;background:#fafafa;border-bottom:1px solid var(--border);font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px;}
+.preview-bar span{font-weight:600;}
+#preview-content{padding:24px 28px;line-height:1.7;font-size:14px;max-height:72vh;overflow-y:auto;}
+#preview-content h1,#preview-content h2,#preview-content h3{color:var(--royal);margin:16px 0 8px;}
+#preview-content p{margin-bottom:12px;}
+#preview-content a{color:var(--royal);}
+
+/* HIGHLIGHTS */
+.hi-error{background:#FFE0DB;border-bottom:2px solid var(--error);cursor:pointer;border-radius:2px;position:relative;}
+.hi-warn{background:#FFF0DC;border-bottom:2px solid var(--warn);cursor:pointer;border-radius:2px;}
+.hi-brand{background:#DBE8FF;border-bottom:2px solid var(--royal);cursor:pointer;border-radius:2px;}
+.hi-style{background:#EFE8FF;border-bottom:2px solid #7c3aed;cursor:pointer;border-radius:2px;}
+.hi-active{outline:3px solid var(--gold);outline-offset:2px;}
+
+/* SIDEBAR */
+.side{background:var(--card);border-radius:12px;border:1px solid var(--border);overflow:hidden;position:sticky;top:84px;max-height:calc(100vh - 104px);display:flex;flex-direction:column;}
 .side-head{padding:14px 18px;border-bottom:1px solid var(--border);background:#fafafa;}
 .side-head h3{font-size:14px;font-weight:700;color:var(--royal);margin-bottom:8px;}
 .ftabs{display:flex;gap:4px;}
 .ftab{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:var(--bg);color:var(--muted);}
 .ftab.on{background:var(--royal);color:white;}
 #issue-list{overflow-y:auto;flex:1;padding:12px;display:flex;flex-direction:column;gap:8px;}
-.icard{border-radius:8px;border-left:3px solid var(--border);padding:10px 12px;background:var(--bg);cursor:pointer;font-size:13px;}
-.icard:hover{background:#eef2ff;}
-.icard.sel{background:#eef2ff;border-left-color:var(--royal);}
+.icard{border-radius:8px;border-left:3px solid var(--border);padding:10px 12px;background:var(--bg);cursor:pointer;font-size:13px;transition:background 0.1s;}
+.icard:hover,.icard.sel{background:#eef2ff;}
+.icard.sel{border-left-color:var(--royal);}
 .icard.be{border-left-color:var(--error);}
-.icard.bw{border-left-color:var(--warn);}
 .icard.bb{border-left-color:var(--royal);}
-.icard.bs{border-left-color:#7c3aed;}
+.icard.bs2{border-left-color:#7c3aed;}
+.icard.bw{border-left-color:var(--warn);}
 .itop{display:flex;align-items:flex-start;gap:8px;margin-bottom:4px;}
 .badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;white-space:nowrap;flex-shrink:0;}
 .badge.br{background:rgba(0,53,148,0.12);color:var(--royal);}
-.badge.bs{background:rgba(124,58,237,0.12);color:#7c3aed;}
+.badge.bst{background:rgba(124,58,237,0.12);color:#7c3aed;}
 .ititle{font-weight:600;font-size:13px;line-height:1.3;flex:1;}
-.idesc{color:var(--muted);font-size:12px;line-height:1.4;}
-.iquote{margin-top:5px;font-size:11px;color:#555;font-style:italic;background:#f3f4f6;padding:3px 7px;border-radius:4px;}
-.ipage{font-size:11px;color:var(--muted);margin-top:5px;font-weight:600;}
-#summary{background:var(--gold-light);border:1px solid var(--gold);border-radius:10px;padding:16px 18px;margin-bottom:20px;font-size:13px;line-height:1.6;color:var(--dark);display:none;}
+.idesc{color:var(--muted);font-size:12px;line-height:1.4;margin-top:2px;}
+.iquote{margin-top:5px;font-size:11px;color:#555;font-style:italic;background:#f3f4f6;padding:3px 7px;border-radius:4px;word-break:break-word;}
 .empty{text-align:center;padding:32px 16px;color:var(--muted);font-size:13px;}
+
+#summary{background:var(--gold-light);border:1px solid var(--gold);border-radius:10px;padding:14px 18px;margin-bottom:16px;font-size:13px;line-height:1.6;color:var(--dark);}
 </style>
 </head>
 <body>
 <header>
   <div class="logo">P</div>
   <div>
-    <h1>PITT DOCUMENT CHECKER</h1>
+    <h1>PITT BRAND &amp; STYLE CHECKER</h1>
     <p>Brand Guidelines v2.2 &middot; Writing Style Manual 3rd Ed. &middot; No account required</p>
   </div>
 </header>
 <main>
-  <div class="toggles">
-    <label class="toggle on" id="tog-brand"><input type="checkbox" id="cb-brand" checked>&nbsp;&#127912; Brand Compliance</label>
-    <label class="toggle on" id="tog-style"><input type="checkbox" id="cb-style" checked>&nbsp;&#9997; Writing Style</label>
+  <div id="input-panel">
+    <h2>Check any Pitt webpage</h2>
+    <p>Enter a URL and we'll check it against Pitt brand guidelines and the Writing Style Manual, with issues highlighted directly on the page.</p>
+    <div class="url-row">
+      <input type="url" id="url-input" placeholder="https://www.pitt.edu/..." spellcheck="false" autocomplete="off">
+      <button class="check-btn" id="check-btn">Check Page</button>
+    </div>
+    <div class="toggles">
+      <label class="toggle on" id="tog-brand"><input type="checkbox" id="cb-brand" checked>&nbsp;&#127912; Brand Compliance</label>
+      <label class="toggle on" id="tog-style"><input type="checkbox" id="cb-style" checked>&nbsp;&#9997;&#65039; Writing Style</label>
+    </div>
   </div>
-  <div id="drop-zone">
-    <h2>Drop your PDF to check it against Pitt standards</h2>
-    <p>Checks brand compliance and writing style with annotations on your document. No account or API key needed.</p>
-    <button class="pick-btn" id="pick-btn">Select PDF</button>
-    <input type="file" id="file-input" accept=".pdf" style="display:none;">
-  </div>
+
   <div id="loading">
     <div class="spinner"></div>
-    <h3>Analyzing your document&hellip;</h3>
-    <p>Usually just a few seconds.</p>
+    <h3>Fetching and analyzing page&hellip;</h3>
+    <p>Checking against Pitt brand and style rules.</p>
+    <div id="load-step"></div>
   </div>
+
   <div id="results">
-    <div class="rhead">
-      <div class="finfo">
-        <span style="font-size:24px;">&#128196;</span>
-        <div><h3 id="fname">document.pdf</h3><p id="fmeta">0 pages</p></div>
-      </div>
-      <button class="new-btn" id="new-btn">&#8617; New document</button>
+    <div class="res-header">
+      <div class="url-badge"><strong>Checked:</strong> <span id="checked-url"></span></div>
+      <button class="new-btn" id="new-btn">&#8617; Check another page</button>
     </div>
     <div id="summary"></div>
     <div class="pills">
-      <div class="pill on" id="pill-all" onclick="doFilter('all')"><span style="font-size:22px;">&#128203;</span><div><div class="pill-n grey" id="cnt-all">0</div><div class="pill-lbl">All Issues</div></div></div>
-      <div class="pill" id="pill-brand" onclick="doFilter('brand')"><span style="font-size:22px;">&#127912;</span><div><div class="pill-n red" id="cnt-brand">0</div><div class="pill-lbl">Brand</div></div></div>
-      <div class="pill" id="pill-style" onclick="doFilter('style')"><span style="font-size:22px;">&#9997;</span><div><div class="pill-n org" id="cnt-style">0</div><div class="pill-lbl">Writing Style</div></div></div>
+      <div class="pill on" id="pill-all" onclick="doFilter('all')"><span style="font-size:20px">&#128203;</span><div><div class="pill-n g" id="cnt-all">0</div><div class="pill-lbl">All Issues</div></div></div>
+      <div class="pill" id="pill-brand" onclick="doFilter('brand')"><span style="font-size:20px">&#127912;</span><div><div class="pill-n r" id="cnt-brand">0</div><div class="pill-lbl">Brand</div></div></div>
+      <div class="pill" id="pill-style" onclick="doFilter('style')"><span style="font-size:20px">&#9997;</span><div><div class="pill-n o" id="cnt-style">0</div><div class="pill-lbl">Writing Style</div></div></div>
     </div>
-    <div id="viewer">
-      <div class="pdf-box">
-        <div class="pdf-nav">
-          <button id="btn-prev" onclick="goPage(-1)">&#8592; Prev</button>
-          <span id="page-ind">Page 1 of 1</span>
-          <button id="btn-next" onclick="goPage(1)">Next &#8594;</button>
-        </div>
-        <div id="page-wrap">
-          <canvas id="pdf-canvas"></canvas>
-          <div id="ann-layer"></div>
-        </div>
+    <div id="layout">
+      <div id="preview-box">
+        <div class="preview-bar">&#128196; <span id="preview-url-label"></span></div>
+        <div id="preview-content"></div>
       </div>
       <div class="side">
         <div class="side-head">
@@ -154,116 +160,177 @@ main{max-width:1200px;margin:0 auto;padding:32px 24px;}
     </div>
   </div>
 </main>
+
 <script>
 (function(){
-  if(typeof pdfjsLib==="undefined"){
-    document.getElementById("drop-zone").innerHTML+="<p style='color:red;margin-top:16px;font-weight:bold;'>PDF reader failed to load. Check your connection and refresh.</p>";
-    return;
-  }
-  pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js";
+  var issues=[], curFilter="all";
 
-  var pdfDoc=null,curPage=1,totPages=0,issues=[],curFilter="all",canW=0,canH=0;
-
+  // ── UI wiring ──
   document.getElementById("cb-brand").addEventListener("change",function(){document.getElementById("tog-brand").classList.toggle("on",this.checked);});
   document.getElementById("cb-style").addEventListener("change",function(){document.getElementById("tog-style").classList.toggle("on",this.checked);});
-  document.getElementById("pick-btn").addEventListener("click",function(){document.getElementById("file-input").click();});
-  document.getElementById("file-input").addEventListener("change",function(){if(this.files[0])go(this.files[0]);});
+  document.getElementById("check-btn").addEventListener("click",run);
   document.getElementById("new-btn").addEventListener("click",reset);
+  document.getElementById("url-input").addEventListener("keydown",function(e){if(e.key==="Enter")run();});
 
-  var dz=document.getElementById("drop-zone");
-  dz.addEventListener("dragover",function(e){e.preventDefault();dz.classList.add("over");});
-  dz.addEventListener("dragleave",function(){dz.classList.remove("over");});
-  dz.addEventListener("drop",function(e){e.preventDefault();dz.classList.remove("over");var f=e.dataTransfer.files[0];if(f&&f.type==="application/pdf")go(f);else alert("Please drop a PDF file.");});
+  function reset(){
+    issues=[];curFilter="all";
+    document.getElementById("results").style.display="none";
+    document.getElementById("input-panel").style.display="block";
+    document.getElementById("url-input").value="";
+    document.getElementById("summary").innerHTML="";
+  }
 
-  async function go(file){
+  function setStep(t){document.getElementById("load-step").textContent=t;}
+
+  async function run(){
+    var url=document.getElementById("url-input").value.trim();
+    if(!url){alert("Please enter a URL.");return;}
+    if(!/^https?:\/\//i.test(url))url="https://"+url;
     var doBrand=document.getElementById("cb-brand").checked;
     var doStyle=document.getElementById("cb-style").checked;
     if(!doBrand&&!doStyle){alert("Select at least one check type.");return;}
-    show("loading");
+
+    document.getElementById("input-panel").style.display="none";
+    document.getElementById("results").style.display="none";
+    document.getElementById("loading").style.display="block";
+    setStep("Fetching page content...");
+
     try{
-      var ab=await file.arrayBuffer();
-      pdfDoc=await pdfjsLib.getDocument({data:ab}).promise;
-      totPages=pdfDoc.numPages;
-      var pages=[];
-      for(var i=1;i<=totPages;i++){
-        var pg=await pdfDoc.getPage(i);
-        var tc=await pg.getTextContent();
-        var txt=tc.items.map(function(it){return it.str;}).join(" ");
-        pages.push({n:i,t:txt});
-      }
+      var html=await fetchPage(url);
+      setStep("Parsing content...");
+      var parsed=parseHTML(html);
+      setStep("Running checks...");
       issues=[];
-      if(doBrand)issues=issues.concat(brandCheck(pages));
-      if(doStyle)issues=issues.concat(styleCheck(pages));
-      curPage=1;
-      await renderPage(curPage);
-      document.getElementById("fname").textContent=file.name;
-      document.getElementById("fmeta").textContent=totPages+" page"+(totPages!==1?"s":"")+" \u00b7 "+issues.length+" issue"+(issues.length!==1?"s":"")+" found";
+      if(doBrand)issues=issues.concat(brandCheck(parsed.text,parsed.blocks));
+      if(doStyle)issues=issues.concat(styleCheck(parsed.text,parsed.blocks));
+      setStep("Highlighting issues...");
+      var annotated=annotateHTML(parsed.html,issues);
+      document.getElementById("preview-content").innerHTML=annotated;
+      document.getElementById("preview-url-label").textContent=url;
+      document.getElementById("checked-url").textContent=url;
       updateCounts();
       renderList("all");
-      show("results");
+      document.getElementById("loading").style.display="none";
+      document.getElementById("results").style.display="block";
+      // click handlers on highlights
+      document.querySelectorAll("[data-issue]").forEach(function(el){
+        el.addEventListener("click",function(){
+          var gi=parseInt(this.getAttribute("data-issue"));
+          highlightIssue(gi);
+        });
+      });
     }catch(err){
-      show("drop-zone");
-      alert("Could not read PDF: "+(err.message||err));
+      document.getElementById("loading").style.display="none";
+      document.getElementById("input-panel").style.display="block";
+      alert("Could not fetch that page.\n\n"+err.message+"\n\nTip: Some pages block external requests. Try a different Pitt URL.");
+      console.error(err);
     }
   }
 
-  function show(id){
-    ["drop-zone","loading","results"].forEach(function(x){document.getElementById(x).style.display=x===id?"block":"none";});
-    document.querySelector(".toggles").style.display=id==="drop-zone"?"flex":"none";
+  // ── Fetch via CORS proxy ──
+  async function fetchPage(url){
+    var proxies=[
+      "https://api.allorigins.win/get?url="+encodeURIComponent(url),
+      "https://corsproxy.io/?"+encodeURIComponent(url)
+    ];
+    var lastErr;
+    for(var i=0;i<proxies.length;i++){
+      try{
+        var r=await fetch(proxies[i],{signal:AbortSignal.timeout(12000)});
+        if(!r.ok)throw new Error("HTTP "+r.status);
+        var data=await r.json().catch(async function(){return{contents:await r.text()};});
+        var content=data.contents||data;
+        if(typeof content!=="string")throw new Error("Unexpected response format");
+        return content;
+      }catch(e){lastErr=e;}
+    }
+    throw new Error("All proxies failed. "+(lastErr?lastErr.message:""));
   }
 
-  function reset(){
-    pdfDoc=null;curPage=1;totPages=0;issues=[];curFilter="all";
-    document.getElementById("file-input").value="";
-    document.getElementById("ann-layer").innerHTML="";
-    document.getElementById("summary").style.display="none";
-    show("drop-zone");
-  }
-
-  async function renderPage(n){
-    var pg=await pdfDoc.getPage(n);
-    var vp=pg.getViewport({scale:1.5});
-    var c=document.getElementById("pdf-canvas");
-    c.width=vp.width;c.height=vp.height;canW=vp.width;canH=vp.height;
-    await pg.render({canvasContext:c.getContext("2d"),viewport:vp}).promise;
-    var al=document.getElementById("ann-layer");
-    al.style.width=vp.width+"px";al.style.height=vp.height+"px";
-    document.getElementById("page-ind").textContent="Page "+n+" of "+totPages;
-    document.getElementById("btn-prev").disabled=n<=1;
-    document.getElementById("btn-next").disabled=n>=totPages;
-    drawAnns(n);
-  }
-
-  window.goPage=async function(d){var n=curPage+d;if(n<1||n>totPages)return;curPage=n;await renderPage(curPage);};
-
-  function drawAnns(pageNum){
-    var al=document.getElementById("ann-layer");
-    al.innerHTML="";
-    var vis=issues.filter(function(i){return(curFilter==="all"||i.type===curFilter)&&i.page===pageNum;});
-    vis.forEach(function(iss,idx){
-      var m=document.createElement("div");
-      m.className="ann";
-      m.style.left=((iss.x/100)*canW)+"px";
-      m.style.top=(((iss.y/100)*canH)-12)+"px";
-      var dc=iss.sev==="error"?"e":iss.type==="brand"?"b":"s";
-      var lbl=iss.type==="brand"?"Brand":"Style";
-      var desc=iss.desc.length>100?iss.desc.slice(0,100)+"...":iss.desc;
-      m.innerHTML="<div class='ann-dot "+dc+"'>"+(idx+1)+"</div><div class='ann-tip'><strong>"+lbl+" &middot; "+iss.sev+"</strong>"+iss.title+"<br><span style='color:rgba(255,255,255,0.7);font-size:11px'>"+desc+"</span></div>";
-      m.addEventListener("click",function(){
-        var gi=issues.indexOf(iss);
-        var card=document.querySelector("[data-gi='"+gi+"']");
-        if(card){card.scrollIntoView({behavior:"smooth",block:"nearest"});document.querySelectorAll(".icard").forEach(function(c){c.classList.remove("sel");});card.classList.add("sel");}
-      });
-      al.appendChild(m);
+  // ── Parse HTML into clean text + blocks ──
+  function parseHTML(html){
+    var parser=new DOMParser();
+    var doc=parser.parseFromString(html,"text/html");
+    // remove scripts, styles, nav, footer
+    ["script","style","noscript","nav","footer","header","iframe","svg"].forEach(function(tag){
+      doc.querySelectorAll(tag).forEach(function(el){el.remove();});
     });
+    var body=doc.querySelector("main")||doc.querySelector("article")||doc.body;
+    var cleanHTML=body?body.innerHTML:"";
+    var text=body?body.innerText||body.textContent||"":"";
+    // blocks: split into sentences/paragraphs for locating issues
+    var blocks=[];
+    (body?body.querySelectorAll("p,h1,h2,h3,h4,li,td,th,span,div"):doc.querySelectorAll("p")).forEach(function(el){
+      var t=(el.innerText||el.textContent||"").trim();
+      if(t.length>10)blocks.push(t);
+    });
+    return{html:cleanHTML,text:text,blocks:blocks};
   }
 
+  // ── Annotate HTML by wrapping matched text ──
+  function annotateHTML(html,issueList){
+    // work on a temp element
+    var div=document.createElement("div");
+    div.innerHTML=html;
+    // for each issue that has a quote, highlight it
+    issueList.forEach(function(iss,gi){
+      if(!iss.quote||iss.quote.length<3)return;
+      var cls=iss.sev==="error"?"hi-error":iss.type==="brand"?"hi-brand":"hi-style";
+      highlightTextInNode(div,iss.quote,gi,cls);
+    });
+    return div.innerHTML;
+  }
+
+  function highlightTextInNode(root,searchText,gi,cls){
+    var walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,null,false);
+    var node,hits=[];
+    while(node=walker.nextNode()){
+      var idx=node.nodeValue.toLowerCase().indexOf(searchText.toLowerCase());
+      if(idx!==-1)hits.push({node:node,idx:idx});
+    }
+    // only highlight first hit
+    if(hits.length===0)return;
+    var h=hits[0];
+    var n=h.node;
+    var before=n.nodeValue.slice(0,h.idx);
+    var match=n.nodeValue.slice(h.idx,h.idx+searchText.length);
+    var after=n.nodeValue.slice(h.idx+searchText.length);
+    var span=document.createElement("mark");
+    span.className=cls;
+    span.setAttribute("data-issue",gi);
+    span.title=issues[gi]?issues[gi].title:"";
+    span.textContent=match;
+    var frag=document.createDocumentFragment();
+    if(before)frag.appendChild(document.createTextNode(before));
+    frag.appendChild(span);
+    if(after)frag.appendChild(document.createTextNode(after));
+    n.parentNode.replaceChild(frag,n);
+  }
+
+  function highlightIssue(gi){
+    document.querySelectorAll("[data-issue]").forEach(function(el){el.classList.remove("hi-active");});
+    document.querySelectorAll("[data-issue='"+gi+"']").forEach(function(el){
+      el.classList.add("hi-active");
+      el.scrollIntoView({behavior:"smooth",block:"center"});
+    });
+    document.querySelectorAll(".icard").forEach(function(c){c.classList.remove("sel");});
+    var card=document.querySelector("[data-gi='"+gi+"']");
+    if(card){card.classList.add("sel");card.scrollIntoView({behavior:"smooth",block:"nearest"});}
+  }
+
+  // ── Filter ──
   window.doFilter=function(f){
     curFilter=f;
     renderList(f);
-    drawAnns(curPage);
     document.querySelectorAll(".pill").forEach(function(p){p.classList.toggle("on",p.id==="pill-"+f);});
     document.querySelectorAll(".ftab").forEach(function(t){t.classList.toggle("on",t.textContent.toLowerCase()===f||(f==="all"&&t.textContent==="All"));});
+    // show/hide highlights
+    document.querySelectorAll("[data-issue]").forEach(function(el){
+      var gi=parseInt(el.getAttribute("data-issue"));
+      var iss=issues[gi];
+      if(!iss)return;
+      el.style.display=(f==="all"||iss.type===f)?"":"none";
+    });
   };
 
   function renderList(f){
@@ -272,18 +339,18 @@ main{max-width:1200px;margin:0 auto;padding:32px 24px;}
     if(filtered.length===0){list.innerHTML="<div class='empty'>No "+(f==="all"?"":f+" ")+"issues found.</div>";return;}
     list.innerHTML=filtered.map(function(iss){
       var gi=issues.indexOf(iss);
-      var bc=iss.sev==="error"?"be":iss.type==="brand"?"bb":"bs";
-      var bdg=iss.type==="brand"?"br":"bs";
-      return "<div class='icard "+bc+"' data-gi='"+gi+"' data-page='"+iss.page+"' onclick='jumpTo("+gi+")'><div class='itop'><span class='badge "+bdg+"'>"+(iss.type==="brand"?"Brand":"Style")+"</span><span class='ititle'>"+iss.title+"</span></div><div class='idesc'>"+iss.desc+"</div>"+(iss.quote?"<div class='iquote'>&ldquo;"+iss.quote+"&rdquo;</div>":"")+"<div class='ipage'>Page "+iss.page+"</div></div>";
+      var bc=iss.sev==="error"?"be":iss.type==="brand"?"bb":"bs2";
+      var bdg=iss.type==="brand"?"br":"bst";
+      return "<div class='icard "+bc+"' data-gi='"+gi+"' onclick='jumpTo("+gi+")'>"
+        +"<div class='itop'><span class='badge "+bdg+"'>"+(iss.type==="brand"?"&#127912; Brand":"&#9997; Style")+"</span><span class='ititle'>"+iss.title+"</span></div>"
+        +"<div class='idesc'>"+iss.desc+"</div>"
+        +(iss.quote?"<div class='iquote'>&ldquo;"+iss.quote+"&rdquo;</div>":"")
+        +"</div>";
     }).join("");
   }
 
-  window.jumpTo=async function(gi){
-    var iss=issues[gi];if(!iss)return;
-    if(curPage!==iss.page){curPage=iss.page;await renderPage(curPage);}
-    document.querySelectorAll(".icard").forEach(function(c){c.classList.remove("sel");});
-    var card=document.querySelector("[data-gi='"+gi+"']");
-    if(card)card.classList.add("sel");
+  window.jumpTo=function(gi){
+    highlightIssue(gi);
   };
 
   function updateCounts(){
@@ -292,67 +359,75 @@ main{max-width:1200px;margin:0 auto;padding:32px 24px;}
     document.getElementById("cnt-all").textContent=issues.length;
     document.getElementById("cnt-brand").textContent=b;
     document.getElementById("cnt-style").textContent=s;
-    document.getElementById("cnt-all").className="pill-n "+(issues.length>0?"red":"grey");
-    if(issues.length>0){
-      var errs=issues.filter(function(i){return i.sev==="error";}).length;
-      var el=document.getElementById("summary");
-      el.style.display="block";
-      el.innerHTML="<strong>Summary:</strong> "+issues.length+" issue"+(issues.length!==1?"s":"")+" found &mdash; "+errs+" error"+(errs!==1?"s":"")+", "+(issues.length-errs)+" warning"+((issues.length-errs)!==1?"s":"")+". Click any marker or card to navigate.";
+    document.getElementById("cnt-all").className="pill-n "+(issues.length>0?"r":"g");
+    var errs=issues.filter(function(i){return i.sev==="error";}).length;
+    var sumEl=document.getElementById("summary");
+    if(issues.length===0){
+      sumEl.innerHTML="<strong>&#10003; No issues found!</strong> This page appears to follow Pitt brand and style guidelines.";
+    }else{
+      sumEl.innerHTML="<strong>Summary:</strong> "+issues.length+" issue"+(issues.length!==1?"s":"")+" found &mdash; "
+        +"<strong style='color:var(--error)'>"+errs+" error"+(errs!==1?"s":"")+"</strong> and "
+        +(issues.length-errs)+" warning"+(issues.length-errs!==1?"s":"")+"."
+        +" Click any highlighted text or sidebar card to navigate.";
     }
   }
 
-  function mk(type,sev,page,title,desc,quote,x,y){return{type:type,sev:sev,page:page,title:title,desc:desc,quote:quote||"",x:x,y:y};}
+  // ── Rule engine ──
+  function findMatches(text,re){
+    var all=[],m;
+    re.lastIndex=0;
+    while((m=re.exec(text))!==null){all.push(m[0]);re.lastIndex=m.index+1;}
+    return all;
+  }
 
-  function runChecks(pages,rules,type){
+  function runRules(text,rules,type){
     var out=[];
-    pages.forEach(function(pg){
-      rules.forEach(function(r){
-        var matches=Array.from(pg.t.matchAll(r.re));
-        if(matches.length>0){
-          var m=matches[0];
-          var xp=Math.min(90,Math.max(10,(m.index/Math.max(pg.t.length,1))*80+10));
-          out.push(mk(type,r.sev,pg.n,r.title,r.desc,m[0].slice(0,60),xp,r.y));
-        }
-      });
+    rules.forEach(function(r){
+      var re=new RegExp(r.src,r.flags||"gi");
+      var matches=findMatches(text,re);
+      if(matches.length>0){
+        out.push({type:type,sev:r.sev,title:r.title,desc:r.desc,quote:matches[0].slice(0,80)});
+      }
     });
     return out;
   }
 
-  function brandCheck(pages){
-    return runChecks(pages,[
-      {re:/hail\s+to\s+possible/gi,sev:"error",title:"Hail to Possible - UCM only",desc:"Reserved for UCM-level use only. Schools and units must not use it independently. Use 'It's Possible at Pitt' instead.",y:30},
-      {re:/where\s+curiosity\s+becomes\s+reality/gi,sev:"warn",title:"Internal brand language",desc:"'Where Curiosity Becomes Reality' is an internal gut-check only - not for external materials.",y:40},
-      {re:/land\s+of\s+possibilities|people-driven\s+people|bridging\s+perspectives|renaissance\s+made\s+real/gi,sev:"warn",title:"Internal brand pillar language",desc:"Brand Pillars are internal framework language only - not for external materials.",y:40},
-      {re:/\barial\b|\bhelvetica\b|\btimes\s+new\s+roman\b|\bcalibri\b|\bgaramond\b|\bfutura\b|\bgeorgia\b/gi,sev:"error",title:"Off-brand font detected",desc:"Arial, Helvetica, Times New Roman, Calibri, Garamond, Futura, Georgia are not approved Pitt fonts. Use ATF Alternate Gothic, Merriweather, or Roboto.",y:35},
-      {re:/pitt\s+script|spirit\s+mark/gi,sev:"warn",title:"Pitt Script - check usage",desc:"Pitt Script is for athletics and spirit materials only. Academic units: merchandise only.",y:50},
-      {re:/university\s+seal/gi,sev:"warn",title:"University Seal - restricted use",desc:"Reserved for official docs (diplomas, commencement) only. Exceptions require UCM approval.",y:50},
-      {re:/informal\s+wordmark/gi,sev:"warn",title:"Informal Wordmark - internal only",desc:"For internal audiences only. Use the Institutional Mark for external materials.",y:50},
-      {re:/paper\s+texture/gi,sev:"warn",title:"Paper texture - check opacity",desc:"Paper texture must be set to 30% opacity per brand guidelines.",y:70},
-      {re:/unit\s+lockup/gi,sev:"warn",title:"Unit lockups - UCM only",desc:"Unit lockups must be created by the Office of University Communications only.",y:50},
+  function brandCheck(text){
+    return runRules(text,[
+      {src:"hail\s+to\s+possible",sev:"error",title:"Hail to Possible - UCM only",desc:"Reserved for UCM institutional use only. Schools and units must not use it. Use 'It's Possible at Pitt' instead."},
+      {src:"where\s+curiosity\s+becomes\s+reality",sev:"warn",title:"Internal brand language on public page",desc:"'Where Curiosity Becomes Reality' is an internal gut-check phrase - not for external materials."},
+      {src:"land\s+of\s+possibilities|people-driven\s+people|bridging\s+perspectives|renaissance\s+made\s+real",sev:"warn",title:"Internal brand pillar language",desc:"Brand Pillars are internal framework language only - not for external-facing materials."},
+      {src:"\barial\b|\bhelvetica\b|\btimes\s+new\s+roman\b|\bcalibri\b|\bgaramond\b|\bfutura\b",sev:"error",title:"Off-brand font referenced",desc:"Arial, Helvetica, Times New Roman, Calibri, Garamond, Futura are not approved Pitt fonts. Use ATF Alternate Gothic, Merriweather, or Roboto."},
+      {src:"pitt\s+script",sev:"warn",title:"Pitt Script - check usage",desc:"Pitt Script is for athletics and spirit materials only. Not for academic or official communications."},
+      {src:"university\s+seal",sev:"warn",title:"University Seal - restricted use",desc:"Reserved for official institutional documents (diplomas, commencement) only. Requires UCM approval."},
+      {src:"informal\s+wordmark",sev:"warn",title:"Informal Wordmark - internal only",desc:"The Informal Wordmark is for internal audiences only. Use the Institutional Mark externally."},
+      {src:"unit\s+lockup",sev:"warn",title:"Unit lockups - UCM only",desc:"Unit lockups must be created by the Office of University Communications. Do not typeset manually."},
     ],"brand");
   }
 
-  function styleCheck(pages){
-    return runChecks(pages,[
-      {re:/\bu\s+of\s+pitt\b|\bu\s+of\s+pittsburgh\b|\bpitt\s+u\b/gi,sev:"error",title:"Wrong University name",desc:"Never: U of Pitt, U of Pittsburgh, Pitt U. First ref: University of Pittsburgh. Then: Pitt or the University.",y:20},
-      {re:/office\s+of\s+university\s+communications\s+and\s+marketing/gi,sev:"error",title:"Outdated office name",desc:"3rd Ed.: Now 'Office of University Communications' - 'and Marketing' has been dropped.",y:25},
-      {re:/\b(Spring|Summer|Fall|Winter)\s+(semester|term|break|session)/g,sev:"warn",title:"Season should be lowercase",desc:"Seasons are always lowercase: fall, spring, summer, winter.",y:30},
-      {re:/\bSept\./g,sev:"warn",title:"Use Sep. not Sept.",desc:"3rd Ed.: September abbreviates to Sep. not Sept.",y:35},
-      {re:/\(\d{3}\)\s*\d{3}[-. ]\d{4}/g,sev:"warn",title:"Phone number format",desc:"3rd Ed.: Use hyphens, no parentheses: 412-624-4141 not (412) 624-4141.",y:40},
-      {re:/\bPh\.D\.\b|\bM\.S\.\b|\bB\.A\.\b|\bB\.S\.\b/g,sev:"warn",title:"Degree has periods",desc:"No periods in degrees: PhD, MS, BA, BS - not Ph.D., M.S., etc.",y:45},
-      {re:/\bbachelors\s+degree\b|\bmasters\s+degree\b/gi,sev:"error",title:"Degree missing apostrophe",desc:"Use bachelor's degree and master's degree - always with apostrophe.",y:45},
-      {re:/\bCMU\b/g,sev:"warn",title:"Use Carnegie Mellon not CMU",desc:"Never CMU. First ref: Carnegie Mellon University. Then: Carnegie Mellon.",y:30},
-      {re:/\bstaff\s+council\b/gi,sev:"error",title:"Wrong name: Staff Council",desc:"3rd Ed.: Correct name is Staff Association Council.",y:50},
-      {re:/\bPitt\s+Police\b/g,sev:"warn",title:"Pitt Police - lowercase p",desc:"3rd Ed.: 'Pitt police' is lowercase. Never 'campus police.'",y:50},
-      {re:/\bhealthcare\b/gi,sev:"warn",title:"Healthcare - two words",desc:"Pitt style: 'health care' is always two words.",y:55},
-      {re:/\bUPMC\s+Health\s+System\b/g,sev:"error",title:"UPMC Health System - outdated",desc:"3rd Ed.: Do not use. First ref: University of Pittsburgh Medical Center (UPMC). Then: UPMC.",y:35},
-      {re:/\bchairman\b/gi,sev:"warn",title:"Chairman - use chair",desc:"Use gender-inclusive 'chair' or 'chairperson.'",y:55},
-      {re:/\bfreshman\b|\bfreshmen\b/gi,sev:"warn",title:"Freshman - use first-year student",desc:"Use 'first-year student(s)' instead.",y:55},
-      {re:/\bmain\s+campus\b|\boakland\s+campus\b/gi,sev:"warn",title:"Wrong campus reference",desc:"Never 'main campus' or 'Oakland campus.' Use 'Pittsburgh campus.'",y:50},
-      {re:/\butilize\b/gi,sev:"warn",title:"Utilize - use 'use' instead",desc:"Avoid 'utilize' - use 'use' instead.",y:60},
-      {re:/\birregardless\b/gi,sev:"error",title:"Irregardless - use regardless",desc:"'Irregardless' is nonstandard. Use 'regardless.'",y:60},
-      {re:/\bneeds\s+(washed|fixed|cleaned|done|painted)\b/gi,sev:"warn",title:"Pittsburghese construction",desc:"Use 'needs to be [past participle]' e.g. 'needs to be washed.'",y:70},
-      {re:/\balright\b/gi,sev:"warn",title:"Alright - use all right",desc:"Pitt style: 'all right' (two words).",y:60},
+  function styleCheck(text){
+    return runRules(text,[
+      {src:"\bu\s+of\s+pitt\b|\bu\s+of\s+pittsburgh\b|\bpitt\s+u\b",sev:"error",title:"Wrong University name",desc:"Never: U of Pitt, U of Pittsburgh, Pitt U. First ref: University of Pittsburgh. Then: Pitt or the University."},
+      {src:"office\s+of\s+university\s+communications\s+and\s+marketing",sev:"error",title:"Outdated office name",desc:"3rd Ed.: Now 'Office of University Communications' - 'and Marketing' has been dropped."},
+      {src:"\b(Spring|Summer|Fall|Winter)\s+(semester|term|break|session|classes)",flags:"g",sev:"warn",title:"Season should be lowercase",desc:"Seasons are always lowercase: fall, spring, summer, winter - never capitalized."},
+      {src:"\bSept\.",flags:"g",sev:"warn",title:"Use Sep. not Sept.",desc:"3rd Ed.: September abbreviates to Sep. not Sept."},
+      {src:"\(\d{3}\)\s*\d{3}[-.\s]\d{4}",flags:"g",sev:"warn",title:"Phone number format",desc:"3rd Ed.: Use hyphens, no parentheses: 412-624-4141 not (412) 624-4141."},
+      {src:"\bPh\.D\.|\bM\.S\.|\bB\.A\.|\bB\.S\.",flags:"g",sev:"warn",title:"Degree abbreviation has periods",desc:"No periods in degrees: PhD, MS, BA, BS - not Ph.D., M.S., etc."},
+      {src:"bachelors\s+degree|masters\s+degree",sev:"error",title:"Degree missing apostrophe",desc:"Use bachelor's degree and master's degree - always with an apostrophe."},
+      {src:"\bCMU\b",flags:"g",sev:"warn",title:"Use Carnegie Mellon not CMU",desc:"Never CMU. First ref: Carnegie Mellon University. Then: Carnegie Mellon."},
+      {src:"\bstaff\s+council\b",sev:"error",title:"Wrong name: Staff Council",desc:"3rd Ed.: The correct name is Staff Association Council."},
+      {src:"\bPitt\s+Police\b",flags:"g",sev:"warn",title:"Pitt Police - lowercase p",desc:"3rd Ed.: 'Pitt police' is lowercase. Never 'campus police.'"},
+      {src:"\bhealthcare\b",sev:"warn",title:"Healthcare - two words",desc:"Pitt style: 'health care' is always two words (unless part of a proper name)."},
+      {src:"\bUPMC\s+Health\s+System\b",flags:"g",sev:"error",title:"UPMC Health System - outdated",desc:"3rd Ed.: Do not use. First ref: University of Pittsburgh Medical Center (UPMC). Then: UPMC."},
+      {src:"\bchairman\b",sev:"warn",title:"Chairman - use chair",desc:"Use gender-inclusive 'chair' or 'chairperson' instead of chairman."},
+      {src:"\bfreshman\b|\bfreshmen\b",sev:"warn",title:"Freshman - use first-year student",desc:"Use 'first-year student(s)' instead of freshman/freshmen."},
+      {src:"\bcongressman\b",sev:"warn",title:"Congressman - use congressperson",desc:"3rd Ed.: Preferred replacement is congressperson."},
+      {src:"\bmain\s+campus\b|\boakland\s+campus\b",sev:"warn",title:"Wrong campus reference",desc:"Never 'main campus' or 'Oakland campus.' Use 'Pittsburgh campus' or 'Pittsburgh campus in Oakland.'"},
+      {src:"\butilize\b",sev:"warn",title:"Utilize - use 'use' instead",desc:"Avoid 'utilize' - use 'use' instead."},
+      {src:"\birregardless\b",sev:"error",title:"Irregardless - use regardless",desc:"'Irregardless' is nonstandard. Use 'regardless.'"},
+      {src:"\bneeds\s+(washed|fixed|cleaned|done|painted|repaired)\b",sev:"warn",title:"Pittsburghese construction",desc:"Use 'needs to be [past participle]' - e.g. 'needs to be washed.'"},
+      {src:"\balright\b",sev:"warn",title:"Alright - use all right",desc:"Pitt style: 'all right' (two words), not 'alright.'"},
+      {src:"\bhealth\s+care\b",flags:"g",sev:"warn",title:"Health care - check context",desc:"Verify 'health care' is two words unless it is part of an official proper name."},
     ],"style");
   }
 
