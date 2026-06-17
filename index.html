@@ -5,7 +5,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pitt Document Checker</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script type="module">
+import * as pdfjsLib from "https://unpkg.com/pdfjs-dist@4.4.168/build/pdf.min.mjs";
+window.pdfjsLib = pdfjsLib;
+pdfjsLib.GlobalWorkerOptions.workerSrc = "https://unpkg.com/pdfjs-dist@4.4.168/build/pdf.worker.min.mjs";
+</script>
 <style>
   :root {
     --royal: #003594; --gold: #FFB81C; --gold-light: #FFF3CC;
@@ -208,8 +212,6 @@
 <script>
 if (typeof pdfjsLib === 'undefined') {
   document.getElementById('upload-zone').innerHTML += '<p style="color:red;font-weight:bold;margin-top:16px;">⚠️ PDF reader failed to load. Check your internet connection and refresh the page.</p>';
-} else {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 }
 
 var pdfDoc = null, currentPage = 1, totalPages = 0;
