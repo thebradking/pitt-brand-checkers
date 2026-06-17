@@ -5,11 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pitt Document Checker</title>
-<script type="module">
-import * as pdfjsLib from "https://unpkg.com/pdfjs-dist@4.4.168/build/pdf.min.mjs";
-window.pdfjsLib = pdfjsLib;
-pdfjsLib.GlobalWorkerOptions.workerSrc = "https://unpkg.com/pdfjs-dist@4.4.168/build/pdf.worker.min.mjs";
-</script>
+
 <style>
   :root {
     --royal: #003594; --gold: #FFB81C; --gold-light: #FFF3CC;
@@ -113,6 +109,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = "https://unpkg.com/pdfjs-dist@4.4.168/b
   .no-issues { text-align: center; padding: 32px 16px; color: var(--muted); }
   .no-issues .ni-icon { font-size: 36px; margin-bottom: 8px; }
 </style>
+<script src="https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.js"></script>
 </head>
 <body>
 <header>
@@ -139,10 +136,8 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = "https://unpkg.com/pdfjs-dist@4.4.168/b
     <span class="upload-icon">📄</span>
     <h2>Drop your PDF to check it against Pitt standards</h2>
     <p>Checks brand compliance and writing style with annotations directly on your document. No account or API key needed.</p>
-    <div style="margin-top:8px;">
-      <input type="file" id="file-input" accept=".pdf" onchange="handleFile(event)"
-        style="font-size:14px; font-family:inherit; cursor:pointer; background:#003594; color:white; border:none; border-radius:8px; padding:12px 28px; font-weight:700;">
-    </div>
+    <button class="btn-upload" onclick="document.getElementById('file-input').click()">Select PDF</button>
+    <input type="file" id="file-input" accept=".pdf" onchange="handleFile(event)" style="position:absolute;left:-9999px;opacity:0;">
   </div>
 
   <div id="loading-panel">
@@ -210,10 +205,9 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = "https://unpkg.com/pdfjs-dist@4.4.168/b
   </div>
 </main>
 <script>
-if (typeof pdfjsLib === 'undefined') {
-  document.getElementById('upload-zone').innerHTML += '<p style="color:red;font-weight:bold;margin-top:16px;">⚠️ PDF reader failed to load. Check your internet connection and refresh the page.</p>';
-}
+// pdfjsLib loaded via script tag below
 
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.js';
 var pdfDoc = null, currentPage = 1, totalPages = 0;
 var allIssues = [], activeFilter = 'all';
 var pageCanvasWidth = 0, pageCanvasHeight = 0;
