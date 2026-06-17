@@ -204,7 +204,11 @@
   </div>
 </main>
 <script>
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+if (typeof pdfjsLib === 'undefined') {
+  document.getElementById('upload-zone').innerHTML += '<p style="color:red;font-weight:bold;margin-top:16px;">⚠️ PDF reader failed to load. Check your internet connection and refresh the page.</p>';
+} else {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
 
 var pdfDoc = null, currentPage = 1, totalPages = 0;
 var allIssues = [], activeFilter = 'all';
@@ -228,7 +232,9 @@ function handleDrop(e) {
 
 function handleFile(e) {
   var file = e.target.files[0];
-  if (file) processFile(file);
+  if (!file) { alert('No file selected.'); return; }
+  if (file.type !== 'application/pdf') { alert('Please select a PDF file. You selected: ' + file.type); return; }
+  processFile(file);
 }
 
 async function processFile(file) {
@@ -278,8 +284,9 @@ async function processFile(file) {
     document.getElementById('loading-panel').style.display = 'none';
     document.getElementById('upload-zone').style.display = 'block';
     document.getElementById('check-options').style.display = 'flex';
-    alert('Error reading PDF: ' + (err.message || 'Make sure this is a text-based PDF, not a scanned image.'));
-    console.error(err);
+    var msg = err ? (err.message || err.toString()) : 'Unknown error';
+    alert('Error: ' + msg + '\n\nMake sure this is a text-based PDF (not a scanned image) and that you have an internet connection (required to load the PDF reader).');
+    console.error('PDF error:', err);
   }
 }
 
